@@ -1,0 +1,58 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Cormorant+Garamond:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --brand-rose: #d66b8a;
+    --brand-blush: #f8d7e5;
+    --brand-cream: #fff9f7;
+    --brand-ink: #2a1720;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: "Inter", sans-serif;
+    color: var(--brand-ink);
+    background:
+      radial-gradient(circle at top left, rgba(214, 107, 138, 0.12), transparent 30%),
+      radial-gradient(circle at top right, rgba(248, 215, 229, 0.45), transparent 32%),
+      linear-gradient(180deg, #fffdfd 0%, #fff7f9 100%);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Cormorant Garamond", serif;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -450px 0;
+  }
+  100% {
+    background-position: 450px 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(to right, #eeeeee 8%, #f5f5f5 18%, #eeeeee 33%);
+  background-size: 800px 104px;
+  animation: shimmer 1.5s infinite linear;
+}
+
+.beauty-shell {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(255, 244, 248, 0.82)),
+    radial-gradient(circle at top, rgba(214, 107, 138, 0.12), transparent 34%);
+}
