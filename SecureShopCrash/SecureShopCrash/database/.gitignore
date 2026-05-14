@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+
+# build
+dist/
+build/
+
+# visual studio
+.vs/
+bin/
+obj/
+
+# macos
+__MACOSX/
+.DS_Store
+
+# env
+.env
+.env.local
+
+# logs
+*.log
+__MACOSX/
+SecureShopCrash/__MACOSX/
+._*
+.DS_Store
+node_modules/
+SecureShopCrash/frontend/node_modules/
