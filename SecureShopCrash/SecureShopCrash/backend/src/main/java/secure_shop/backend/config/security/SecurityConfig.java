@@ -242,8 +242,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Allowed origins
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174", "http://localhost:3000"));
+        // Allowed origin patterns (Vercel, localhost, etc.)
+        configuration.setAllowedOriginPatterns(List.of("*"));
 
         // Allowed methods
         configuration.setAllowedMethods(Arrays.asList(
