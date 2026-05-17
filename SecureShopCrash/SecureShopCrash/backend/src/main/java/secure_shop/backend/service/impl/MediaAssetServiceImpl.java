@@ -24,7 +24,7 @@ public class MediaAssetServiceImpl implements MediaAssetService {
 
     @Override
     public List<MediaAssetDTO> getMediaByProductId(UUID productId) {
-        List<MediaAsset> assets = mediaAssetRepository.findByProductId(productId);
+        List<MediaAsset> assets = mediaAssetRepository.findByProduct_Id(productId);
         return assets.stream()
                 .map(this::toDTO)
                 .toList();

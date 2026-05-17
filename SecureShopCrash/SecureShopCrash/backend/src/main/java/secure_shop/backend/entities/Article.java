@@ -47,6 +47,14 @@ public class Article {
     @Column(nullable = false, updatable = false)
     private Instant publishedAt;
 
+    @Size(max = 2048, message = "URL bài báo tối đa 2048 ký tự")
+    @Column(length = 2048)
+    private String externalUrl;
+
+    @Size(max = 2048, message = "URL ảnh đại diện tối đa 2048 ký tự")
+    @Column(length = 2048)
+    private String imageUrl;
+
     @NotNull(message = "Trạng thái bài viết không được để trống")
     @Column(nullable = false)
     private Boolean active = true;

@@ -11,19 +11,18 @@
     --brand-blush: #f8d7e5;
     --brand-cream: #fff9f7;
     --brand-ink: #2a1720;
+    --page-bg: #fff0f5;
   }
 
   html {
     scroll-behavior: smooth;
+    background-color: var(--page-bg);
   }
 
   body {
     font-family: "Inter", sans-serif;
     color: var(--brand-ink);
-    background:
-      radial-gradient(circle at top left, rgba(214, 107, 138, 0.12), transparent 30%),
-      radial-gradient(circle at top right, rgba(248, 215, 229, 0.45), transparent 32%),
-      linear-gradient(180deg, #fffdfd 0%, #fff7f9 100%);
+    background-color: var(--page-bg);
   }
 
   h1,
@@ -52,7 +51,5 @@
 }
 
 .beauty-shell {
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(255, 244, 248, 0.82)),
-    radial-gradient(circle at top, rgba(214, 107, 138, 0.12), transparent 34%);
+  background-color: var(--page-bg);
 }

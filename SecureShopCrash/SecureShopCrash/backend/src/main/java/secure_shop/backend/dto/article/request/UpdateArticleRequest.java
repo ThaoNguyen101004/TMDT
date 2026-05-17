@@ -30,5 +30,11 @@ public class UpdateArticleRequest {
     @Size(min = 20, message = "Nội dung bài viết phải có ít nhất 20 ký tự")
     private String content;
 
+    @Size(max = 2048, message = "URL tối đa 2048 ký tự")
+    private String externalUrl;
+
+    @Size(max = 2048, message = "URL ảnh đại diện tối đa 2048 ký tự")
+    private String imageUrl;
+
     private Boolean active;
 }

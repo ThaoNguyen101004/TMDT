@@ -9,6 +9,7 @@ export interface CartItem {
   inStock: boolean;
   availableStock?: number;
   quantity: number;
+  comboId?: string;
 }
 
 class CartService {
@@ -45,6 +46,7 @@ class CartService {
       thumbnailUrl: string;
       inStock: boolean;
       availableStock?: number;
+      comboId?: string;
     },
     quantity = 1
   ): Promise<boolean> {
@@ -67,7 +69,9 @@ class CartService {
       try {
         // Lấy cart hiện tại để kiểm tra số lượng đã có
         const currentCart = await this.getCart();
-        const existing = currentCart.find((i) => i.productId === product.id);
+        const existing = currentCart.find((i) => 
+          i.productId === product.id && i.comboId === product.comboId
+        );
 
         const currentQty = existing ? existing.quantity : 0;
         const totalQty = currentQty + quantity;
@@ -98,6 +102,7 @@ class CartService {
           inStock: product.inStock,
           availableStock: product.availableStock,
           quantity: quantity,
+          comboId: product.comboId,
         });
       } catch (error: any) {
         // Xử lý lỗi từ backend
@@ -110,7 +115,9 @@ class CartService {
     } else {
       // === GUEST USER ===
       const cart = await this.getCart();
-      const existing = cart.find((i) => i.productId === product.id);
+      const existing = cart.find((i) => 
+        i.productId === product.id && i.comboId === product.comboId
+      );
 
       if (existing) {
         const newQty = existing.quantity + quantity;
@@ -144,6 +151,7 @@ class CartService {
           inStock: product.inStock,
           availableStock: product.availableStock,
           quantity: Math.min(quantity, maxQty),
+          comboId: product.comboId,
         });
       }
 
@@ -154,9 +162,9 @@ class CartService {
   }
 
   // === Update Quantity ===
-  async updateQuantity(productId: string, quantity: number): Promise<boolean> {
+  async updateQuantity(productId: string, quantity: number, comboId?: string): Promise<boolean> {
     const cart = await this.getCart();
-    const item = cart.find((i) => i.productId === productId);
+    const item = cart.find((i) => i.productId === productId && i.comboId === comboId);
 
     if (!item) {
       toast.error("Sản phẩm không tồn tại trong giỏ hàng.");
@@ -173,7 +181,7 @@ class CartService {
 
     // Nếu quantity <= 0 thì xóa sản phẩm
     if (quantity <= 0) {
-      return this.removeItem(productId);
+      return this.removeItem(productId, comboId);
     }
 
     if (this.isAuthenticated()) {
@@ -182,6 +190,7 @@ class CartService {
           // Sửa: dùng api
           productId,
           quantity,
+          comboId
         });
         return true;
       } catch (error: any) {
@@ -199,10 +208,14 @@ class CartService {
   }
 
   // === Remove Item ===
-  async removeItem(productId: string): Promise<boolean> {
+  async removeItem(productId: string, comboId?: string): Promise<boolean> {
     if (this.isAuthenticated()) {
       try {
-        await api.delete(`/cart/remove/${productId}`); // Sửa: dùng api
+        // Since backend doesn't support comboId in delete URL right now, we can pass it as a query param or change it.
+        // Wait, backend `DELETE /cart/remove/{id}` only takes `id` which is `productId`. If a cart has both the product and combo of that product, removing one might remove both!
+        // We will need to update backend CartController `removeItem` to take `CartItem` in body or query param.
+        // For now, I will use POST /cart/remove since DELETE with body is not widely supported.
+        await api.post(`/cart/remove`, { productId, comboId });
         return true;
       } catch {
         toast.error("Không thể xóa sản phẩm khỏi giỏ hàng.");
@@ -210,7 +223,7 @@ class CartService {
       }
     } else {
       const cart = await this.getCart();
-      const filtered = cart.filter((i) => i.productId !== productId);
+      const filtered = cart.filter((i) => !(i.productId === productId && i.comboId === comboId));
       localStorage.setItem("guestCart", JSON.stringify(filtered));
       return true;
     }

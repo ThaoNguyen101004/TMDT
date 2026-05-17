@@ -20,10 +20,18 @@ import { brandApi, categoryApi, productApi } from "../utils/api";
 import type { ProductQueryParams } from "../types/query";
 import Pagination from "../components/Pagination";
 import SkeletonCard from "../components/SkeletonCard";
+import { useUIConfig } from "../stores/uiConfigStore";
+
+const COLS_CLASS: Record<number, string> = {
+  2: "grid-cols-1 sm:grid-cols-2",
+  3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+  4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+};
 
 const Products: React.FC = () => {
   const { state } = useLocation();
   const { keyword } = state || {};
+  const { config } = useUIConfig();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -75,11 +83,11 @@ const Products: React.FC = () => {
     sortBy: "name"
   });
 
-  // === Pagination ===
+  // === Pagination (reads defaults from UIConfig) ===
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const [pageSize, setPageSize] = useState(12);
+  const [pageSize, setPageSize] = useState(config.productsPage.pageSize);
 
   // === Fetch products ===
   const fetchProducts = useCallback(
@@ -253,10 +261,10 @@ const Products: React.FC = () => {
     }
     
     // Update price
-    if (newFilter.minPrice > 0) setMinPrice(newFilter.minPrice.toString());
+    if ((newFilter.minPrice ?? 0) > 0) setMinPrice(newFilter.minPrice!.toString());
     else setMinPrice("");
     
-    if (newFilter.maxPrice < Number.MAX_VALUE) setMaxPrice(newFilter.maxPrice.toString());
+    if ((newFilter.maxPrice ?? Number.MAX_VALUE) < Number.MAX_VALUE) setMaxPrice(newFilter.maxPrice!.toString());
     else setMaxPrice("");
     
     // Update sort
@@ -450,7 +458,7 @@ const Products: React.FC = () => {
                       <div
                         className={`grid gap-4 sm:gap-6 ${
                           viewMode === "grid"
-                            ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+                            ? (COLS_CLASS[config.productsPage.columnsPerRow] ?? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3")
                             : "grid-cols-1"
                         }`}
                       >
@@ -463,7 +471,6 @@ const Products: React.FC = () => {
                           >
                             <ProductCard
                               product={product}
-                              onAddToCart={handleAddToCart}
                             />
                           </motion.div>
                         ))}

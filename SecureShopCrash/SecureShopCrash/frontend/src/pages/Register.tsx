@@ -42,6 +42,8 @@ const Register: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
+  const [otpValue, setOtpValue] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const {
     register,
@@ -81,6 +83,30 @@ const Register: React.FC = () => {
       window.location.href = `${oauthUrl}?redirect=${encodeURIComponent(redirectTo)}`;
     } else {
       window.location.href = oauthUrl;
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpValue || otpValue.length < 6) {
+      toast.error('Vui lòng nhập đủ 6 số OTP');
+      return;
+    }
+    
+    setIsVerifying(true);
+    try {
+      await axiosInstance.post("/auth/verify-registration", {
+        tempToken: registeredEmail, // Using tempToken field to send email
+        otp: otpValue
+      });
+      toast.success("Xác thực tài khoản thành công! Vui lòng đăng nhập.");
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 1500);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Mã OTP không hợp lệ");
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -129,34 +155,31 @@ const Register: React.FC = () => {
             </div>
 
             <div className="bg-white py-8 px-6 shadow-lg rounded-lg space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-semibold text-sm mt-0.5">
-                    1
-                  </div>
-                  <p className="text-sm text-gray-700">
-                    Mở email và tìm thư từ Lumière Beauty
-                  </p>
+              <form onSubmit={handleVerifyOtp} className="space-y-4">
+                <div>
+                  <label htmlFor="otp" className="block text-sm font-medium text-gray-700 text-center mb-4">
+                    Nhập mã OTP 6 số đã được gửi tới email
+                  </label>
+                  <input
+                    id="otp"
+                    type="text"
+                    maxLength={6}
+                    value={otpValue}
+                    onChange={(e) => setOtpValue(e.target.value.replace(/[^0-9]/g, ''))}
+                    className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-center text-2xl tracking-[0.5em] font-bold"
+                    placeholder="------"
+                  />
                 </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-semibold text-sm mt-0.5">
-                    2
-                  </div>
-                  <p className="text-sm text-gray-700">
-                    Click vào link xác thực trong email
-                  </p>
+                <div>
+                  <button
+                    type="submit"
+                    disabled={isVerifying || otpValue.length < 6}
+                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50"
+                  >
+                    {isVerifying ? "Đang xác thực..." : "Xác nhận OTP"}
+                  </button>
                 </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-semibold text-sm mt-0.5">
-                    3
-                  </div>
-                  <p className="text-sm text-gray-700">
-                    Đăng nhập và bắt đầu mua sắm
-                  </p>
-                </div>
-              </div>
+              </form>
 
               {/* ✅ TÍCH HỢP COMPONENT RESEND VERIFICATION Ở ĐÂY */}
               <div className="pt-6 border-t border-gray-200">
@@ -195,7 +218,7 @@ const Register: React.FC = () => {
                     Lưu ý
                   </h3>
                   <p className="text-sm text-blue-700">
-                    Link xác thực có hiệu lực trong 24 giờ. Nếu không thấy email, vui lòng kiểm tra thư mục spam.
+                    Mã xác thực có hiệu lực trong 5 phút. Nếu không thấy email, vui lòng kiểm tra thư mục spam.
                   </p>
                 </div>
               </div>

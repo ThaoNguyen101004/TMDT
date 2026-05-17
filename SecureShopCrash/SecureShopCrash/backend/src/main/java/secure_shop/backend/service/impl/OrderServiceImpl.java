@@ -14,6 +14,7 @@ import secure_shop.backend.dto.order.OrderSummaryDTO;
 import secure_shop.backend.entities.*;
 import secure_shop.backend.enums.OrderStatus;
 import secure_shop.backend.enums.PaymentMethod;
+import secure_shop.backend.enums.PaymentProvider;
 import secure_shop.backend.enums.PaymentStatus;
 import secure_shop.backend.exception.BusinessRuleViolationException;
 import secure_shop.backend.exception.ResourceNotFoundException;
@@ -47,6 +48,7 @@ public class OrderServiceImpl implements OrderService {
     private final EmailService emailService;
     private final UserRepository userRepository;
     private final DiscountRepository discountRepository;
+    private final ComboRepository comboRepository;
 
     @Override
     public OrderDTO createOrder(OrderCreateRequest request, UUID userId) {
@@ -56,17 +58,30 @@ public class OrderServiceImpl implements OrderService {
 
         // Reserve inventory first for all items. Reservations participate in the same transaction
         for (OrderItemRequest itemReq : request.getItems()) {
-            Product product = productRepository.findById(itemReq.getProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product", itemReq.getProductId()));
+            if (itemReq.getComboId() != null) {
+                Combo combo = comboRepository.findById(itemReq.getComboId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Combo", itemReq.getComboId()));
+                for (ComboItem comboItem : combo.getItems()) {
+                    Product product = comboItem.getProduct();
+                    var optInv = inventoryRepository.findByProductId(product.getId());
+                    if (optInv.isEmpty()) {
+                        throw new BusinessRuleViolationException("Không tìm thấy tồn kho cho sản phẩm: " + product.getId());
+                    }
+                    inventoryService.reserveStock(optInv.get().getId(), itemReq.getQuantity() * comboItem.getQuantity());
+                }
+            } else {
+                Product product = productRepository.findById(itemReq.getProductId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Product", itemReq.getProductId()));
 
-            var optInv = inventoryRepository.findByProductId(product.getId());
-            if (optInv.isEmpty()) {
-                throw new BusinessRuleViolationException("Không tìm thấy tồn kho cho sản phẩm: " + product.getId());
+                var optInv = inventoryRepository.findByProductId(product.getId());
+                if (optInv.isEmpty()) {
+                    throw new BusinessRuleViolationException("Không tìm thấy tồn kho cho sản phẩm: " + product.getId());
+                }
+                var inv = optInv.get();
+
+                // reserve - will participate in the outer transaction; if any reserve fails, the exception will rollback all changes
+                inventoryService.reserveStock(inv.getId(), itemReq.getQuantity());
             }
-            var inv = optInv.get();
-
-            // reserve - will participate in the outer transaction; if any reserve fails, the exception will rollback all changes
-            inventoryService.reserveStock(inv.getId(), itemReq.getQuantity());
         }
 
         // Fetch full user entity (avoid transient with only id so email sending works)
@@ -91,20 +106,62 @@ public class OrderServiceImpl implements OrderService {
 
        // create order items and attach to order
         for (OrderItemRequest itemReq : request.getItems()) {
-            Product product = productRepository.findById(itemReq.getProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product", itemReq.getProductId()));
+            if (itemReq.getComboId() != null) {
+                Combo combo = comboRepository.findById(itemReq.getComboId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Combo", itemReq.getComboId()));
+                
+                // Calculate total original price of all items in combo to determine ratio
+                BigDecimal totalOriginalPrice = BigDecimal.ZERO;
+                for (ComboItem ci : combo.getItems()) {
+                    totalOriginalPrice = totalOriginalPrice.add(ci.getProduct().getPrice().multiply(BigDecimal.valueOf(ci.getQuantity())));
+                }
 
-            BigDecimal unitPrice = product.getPrice();
-            BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
+                for (ComboItem comboItem : combo.getItems()) {
+                    Product product = comboItem.getProduct();
+                    BigDecimal originalLinePrice = product.getPrice().multiply(BigDecimal.valueOf(comboItem.getQuantity()));
+                    BigDecimal discountedUnitPrice;
+                    
+                    if (combo.getFixedPrice() != null && totalOriginalPrice.compareTo(BigDecimal.ZERO) > 0) {
+                        // Ratio = originalLinePrice / totalOriginalPrice
+                        BigDecimal ratio = originalLinePrice.divide(totalOriginalPrice, 4, RoundingMode.HALF_UP);
+                        // Discounted unit price = (combo.fixedPrice * ratio) / quantity
+                        BigDecimal linePrice = combo.getFixedPrice().multiply(ratio);
+                        discountedUnitPrice = linePrice.divide(BigDecimal.valueOf(comboItem.getQuantity()), 2, RoundingMode.HALF_UP);
+                    } else if (combo.getDiscountPercent() != null) {
+                        BigDecimal discountMultiplier = BigDecimal.valueOf(100 - combo.getDiscountPercent()).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                        discountedUnitPrice = product.getPrice().multiply(discountMultiplier).setScale(2, RoundingMode.HALF_UP);
+                    } else {
+                        discountedUnitPrice = product.getPrice();
+                    }
 
-            OrderItem item = OrderItem.builder()
-                    .product(product)
-                    .quantity(itemReq.getQuantity())
-                    .unitPrice(unitPrice)
-                    .lineTotal(lineTotal) // Tính ngay
-                    .order(order)
-                    .build();
-            order.getOrderItems().add(item);
+                    int totalQty = itemReq.getQuantity() * comboItem.getQuantity();
+                    BigDecimal lineTotal = discountedUnitPrice.multiply(BigDecimal.valueOf(totalQty));
+
+                    OrderItem item = OrderItem.builder()
+                            .product(product)
+                            .quantity(totalQty)
+                            .unitPrice(discountedUnitPrice)
+                            .lineTotal(lineTotal)
+                            .order(order)
+                            .build();
+                    order.getOrderItems().add(item);
+                }
+            } else {
+                Product product = productRepository.findById(itemReq.getProductId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Product", itemReq.getProductId()));
+
+                BigDecimal unitPrice = product.getPrice();
+                BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
+
+                OrderItem item = OrderItem.builder()
+                        .product(product)
+                        .quantity(itemReq.getQuantity())
+                        .unitPrice(unitPrice)
+                        .lineTotal(lineTotal) // Tính ngay
+                        .order(order)
+                        .build();
+                order.getOrderItems().add(item);
+            }
         }
 
         // --- Tính subtotal tại server (an toàn) ---
@@ -133,6 +190,8 @@ public class OrderServiceImpl implements OrderService {
             discountRepository.save(discount);
         }
 
+        createPaymentForOrder(savedOrder, request.getPaymentMethod());
+
         // Send order confirmation email for all payment methods
         try {
             emailService.sendOrderConfirmationEmail(savedOrder);
@@ -141,6 +200,30 @@ public class OrderServiceImpl implements OrderService {
             log.error("Failed to send order confirmation email for orderId={}", savedOrder.getId(), ex);
         }
         return orderMapper.toDTO(savedOrder);
+    }
+
+    private void createPaymentForOrder(Order order, PaymentMethod paymentMethod) {
+        if (paymentMethod == null) {
+            paymentMethod = PaymentMethod.COD;
+        }
+
+        PaymentProvider provider = PaymentProvider.NONE;
+        PaymentStatus status = paymentMethod == PaymentMethod.COD
+                ? PaymentStatus.UNPAID
+                : PaymentStatus.PENDING;
+
+        Payment payment = Payment.builder()
+                .order(order)
+                .amount(order.getGrandTotal())
+                .method(paymentMethod)
+                .provider(provider)
+                .status(status)
+                .gatewayResponse(new java.util.HashMap<>())
+                .build();
+
+        paymentRepository.save(payment);
+        order.setPayment(payment);
+        order.setPaymentStatus(status);
     }
 
     @Override
@@ -377,12 +460,25 @@ public class OrderServiceImpl implements OrderService {
         // Check payment method
         Payment payment = order.getPayment();
         boolean isCOD = payment != null && payment.getMethod() == PaymentMethod.COD;
+        boolean isBankTransfer = payment != null && payment.getMethod() == PaymentMethod.BANK_TRANSFER;
 
         // Update status
         order.setStatus(newStatus);
 
         // For COD payment: if status is DELIVERED, update payment-related fields
         if (isCOD && newStatus == OrderStatus.DELIVERED) {
+            order.setHasPaid(true);
+            order.setPaymentStatus(secure_shop.backend.enums.PaymentStatus.PAID);
+            if (order.getConfirmedAt() == null) {
+                order.setConfirmedAt(Instant.now());
+            }
+            // Also update payment entity status
+            payment.setStatus(secure_shop.backend.enums.PaymentStatus.PAID);
+            payment.setPaidAt(Instant.now());
+        }
+
+        // For BANK_TRANSFER payment: if status is CONFIRMED, update payment-related fields
+        if (isBankTransfer && newStatus == OrderStatus.CONFIRMED) {
             order.setHasPaid(true);
             order.setPaymentStatus(secure_shop.backend.enums.PaymentStatus.PAID);
             if (order.getConfirmedAt() == null) {

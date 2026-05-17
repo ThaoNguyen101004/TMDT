@@ -122,10 +122,10 @@ const Contact: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-rose-50">
         <Header />
       {/* Hero Section */}
-      <section className="relative h-[300px] bg-gradient-to-r from-purple-600 to-cyan-500 overflow-hidden">
+      <section className="relative h-[300px] bg-gradient-to-r from-pink-400 via-rose-400 to-fuchsia-400 overflow-hidden">
         <div className="absolute inset-0 bg-black opacity-20"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
           <motion.div
@@ -143,7 +143,7 @@ const Contact: React.FC = () => {
       </section>
 
       {/* Contact Info Cards */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-rose-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {contactInfo.map((info, index) => {
@@ -157,14 +157,14 @@ const Contact: React.FC = () => {
                   viewport={{ once: true }}
                   className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow"
                 >
-                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                    <Icon className="h-6 w-6 text-purple-600" />
+                  <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mb-4">
+                    <Icon className="h-6 w-6 text-pink-500" />
                   </div>
                   <h3 className="text-lg font-semibold text-zinc-800 mb-2">{info.title}</h3>
                   {info.link ? (
                     <a 
                       href={info.link}
-                      className="text-gray-600 hover:text-purple-600 transition-colors"
+                      className="text-gray-600 hover:text-pink-500 transition-colors"
                     >
                       {info.content}
                     </a>
@@ -201,7 +201,7 @@ const Contact: React.FC = () => {
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-400 focus:border-transparent bg-pink-50/30"
                     placeholder="Nhập họ và tên của bạn"
                   />
                 </div>
@@ -217,7 +217,7 @@ const Contact: React.FC = () => {
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-400 focus:border-transparent bg-pink-50/30"
                       placeholder="email@example.com"
                     />
                   </div>
@@ -232,7 +232,7 @@ const Contact: React.FC = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-400 focus:border-transparent bg-pink-50/30"
                       placeholder="0123 456 789"
                     />
                   </div>
@@ -247,7 +247,7 @@ const Contact: React.FC = () => {
                     name="subject"
                     value={formData.subject}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-400 focus:border-transparent bg-pink-50/30"
                   >
                     <option value="">Chọn chủ đề</option>
                     <option value="product">Tư vấn sản phẩm</option>
@@ -268,7 +268,7 @@ const Contact: React.FC = () => {
                     value={formData.message}
                     onChange={handleInputChange}
                     rows={5}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-3 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-400 focus:border-transparent resize-none bg-pink-50/30"
                     placeholder="Nhập nội dung tin nhắn của bạn..."
                   ></textarea>
                 </div>
@@ -276,7 +276,7 @@ const Contact: React.FC = () => {
                 <button
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="w-full bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-gradient-to-r from-pink-500 to-rose-400 text-white px-6 py-3 rounded-lg font-semibold hover:from-pink-600 hover:to-rose-500 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-pink-200"
                 >
                   {isSubmitting ? (
                     <>
@@ -310,7 +310,7 @@ const Contact: React.FC = () => {
                 ></iframe>
               </div>
 
-              <div className="bg-gradient-to-r from-purple-600 to-cyan-500 p-6 rounded-lg text-white">
+              <div className="bg-gradient-to-br from-pink-400 via-rose-400 to-fuchsia-400 p-6 rounded-lg text-white">
                 <div className="flex items-center gap-3 mb-4">
                   <MessageCircle className="h-6 w-6" />
                   <h3 className="text-xl font-semibold">Kết Nối Với Chúng Tôi</h3>
@@ -350,94 +350,10 @@ const Contact: React.FC = () => {
         </div>
       </section>
 
-      {/* Branches Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <h2 className="text-3xl font-bold text-zinc-800 mb-4">Hệ Thống Chi Nhánh</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Lumière Beauty có mặt tại các thành phố lớn trên cả nước
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-            {branches.map((branch, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow"
-              >
-                <img
-                  src={branch.image}
-                  alt={branch.city}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="p-6">
-                  <h3 className="text-xl font-semibold text-zinc-800 mb-3">{branch.city}</h3>
-                  <div className="space-y-2 text-gray-600">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                      <span>{branch.address}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-5 w-5 text-purple-600 flex-shrink-0" />
-                      <a href={`tel:${branch.phone.replace(/\s/g, '')}`} className="hover:text-purple-600">
-                        {branch.phone}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ Section */}
-      <section className="py-16 bg-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <h2 className="text-3xl font-bold text-zinc-800 mb-4">Câu Hỏi Thường Gặp</h2>
-            <p className="text-gray-600">
-              Những câu hỏi khách hàng thường xuyên đặt ra
-            </p>
-          </motion.div>
-
-          <div className="space-y-4">
-            {faqs.map((faq, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className="bg-gray-50 rounded-lg p-6 hover:shadow-md transition-shadow"
-              >
-                <h3 className="text-lg font-semibold text-zinc-800 mb-2">{faq.question}</h3>
-                <p className="text-gray-600">{faq.answer}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+      
 
       {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-purple-600 to-cyan-500 text-white">
+      <section className="py-16 bg-gradient-to-r from-pink-400 via-rose-400 to-fuchsia-400 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -451,7 +367,7 @@ const Contact: React.FC = () => {
             </p>
             <a
               href="tel:0123456789"
-              className="inline-flex items-center gap-2 bg-white text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+              className="inline-flex items-center gap-2 bg-white text-pink-500 px-8 py-3 rounded-lg font-semibold hover:bg-rose-50 transition-colors"
             >
               <Phone className="h-5 w-5" />
               0123 456 789

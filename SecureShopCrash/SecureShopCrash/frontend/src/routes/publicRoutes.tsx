@@ -4,7 +4,6 @@ import ProductDetails from "../pages/ProductDetail";
 import Login from "../pages/Login";
 import Cart from "../pages/Cart";
 import OAuth2Redirect from "../pages/OAuth2Redirect";
-import About from "../pages/About";
 import Contact from "../pages/Contact";
 import Profile from "../pages/Profile";
 import ForgotPassword from "../pages/ForgotPassword";
@@ -17,10 +16,11 @@ import Terms from "../pages/Terms";
 import Privacy from "../pages/Privacy";
 import Checkout from "../pages/Checkout";
 import OrderSuccess from "../pages/OrderSuccess";
-import VNPayReturn from "../pages/VNPayReturn";
-import { VNPAY_RETURN } from "./routePaths";
+import BankTransferPayment from "../pages/BankTransferPayment";
 import Orders from "../pages/Orders";
 import OrderDetail from "../pages/OrderDetail";
+import Favorites from "../pages/Favorites";
+import ComboDeals from "../pages/ComboDeals";
 
 export const publicRoutes = {
   path: "/",
@@ -40,6 +40,14 @@ export const publicRoutes = {
     {
       path: "cart",
       element: <Cart />,
+    },
+    {
+      path: "favorites",
+      element: <Favorites />,
+    },
+    {
+      path: "combo-deals",
+      element: <ComboDeals />,
     },
 
     // Chỉ cho phép khi chưa login
@@ -126,10 +134,10 @@ export const publicRoutes = {
       ),
     },
     {
-      path: VNPAY_RETURN,
+      path: "payment/bank-transfer",
       element: (
         <UserGuard>
-          <VNPayReturn />
+          <BankTransferPayment />
         </UserGuard>
       ),
     },
@@ -137,10 +145,6 @@ export const publicRoutes = {
     {
       path: "oauth2/redirect",
       element: <OAuth2Redirect />,
-    },
-    {
-      path: "about",
-      element: <About />,
     },
     {
       path: "contact",

@@ -31,7 +31,7 @@ public class ArticleServiceImpl implements ArticleService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "articles_active", key = "#pageable.pageNumber + '-' + #pageable.pageSize")
+    @Cacheable(value = "articles_v2", key = "#pageable.pageNumber + '-' + #pageable.pageSize")
     public Page<ArticleDTO> getAllArticles(Pageable pageable, Boolean active) {
         Specification<Article> spec = (root, query, cb) -> cb.conjunction();
 
@@ -45,7 +45,7 @@ public class ArticleServiceImpl implements ArticleService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "article_by_slug", key = "#slug")
+    @Cacheable(value = "article_slug_v2", key = "#slug")
     public ArticleDTO getArticleBySlug(String slug) {
         Article article = articleRepository.findBySlug(slug)
                 .orElseThrow(() -> new EntityNotFoundException("Article not found"));
@@ -53,7 +53,7 @@ public class ArticleServiceImpl implements ArticleService {
     }
 
     @Override
-    @CacheEvict(value = "articles_active", allEntries = true)
+    @CacheEvict(value = "articles_v2", allEntries = true)
     public ArticleDTO createArticle(CreateArticleRequest req, User admin) {
         Article article = articleMapper.fromCreateRequest(req, admin);
         Article saved = articleRepository.save(article);
@@ -61,22 +61,24 @@ public class ArticleServiceImpl implements ArticleService {
     }
 
     @Override
-    @CacheEvict(value = {"article_by_slug", "articles_active"}, allEntries = true)
+    @CacheEvict(value = {"article_slug_v2", "articles_v2"}, allEntries = true)
     public ArticleDTO updateArticle(UUID id, UpdateArticleRequest req, User admin) {
         Article article = articleRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Article not found"));
-        if (!article.getAdmin().getId().equals(admin.getId()))
-            throw new AccessDeniedException("Not authorized");
 
         article.setTitle(req.getTitle());
         article.setSummary(req.getSummary());
         article.setContent(req.getContent());
-        article.setActive(req.getActive());
+        if (req.getActive() != null) {
+            article.setActive(req.getActive());
+        }
+        article.setExternalUrl(req.getExternalUrl());
+        article.setImageUrl(req.getImageUrl());
         return articleMapper.toDTO(articleRepository.save(article));
     }
 
     @Override
-    @CacheEvict(value = {"article_by_slug", "articles_active"}, allEntries = true)
+    @CacheEvict(value = {"article_slug_v2", "articles_v2"}, allEntries = true)
     public void deleteArticle(UUID id) {
         articleRepository.deleteById(id);
     }

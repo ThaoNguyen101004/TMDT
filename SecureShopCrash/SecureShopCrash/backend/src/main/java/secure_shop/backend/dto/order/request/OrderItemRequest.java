@@ -14,10 +14,11 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 public class OrderItemRequest implements Serializable {
-    @NotNull
     private UUID productId;
 
     @NotNull
     @Positive
     private Integer quantity;
+
+    private UUID comboId;
 }

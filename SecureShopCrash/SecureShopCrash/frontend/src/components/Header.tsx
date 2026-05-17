@@ -4,6 +4,7 @@ import {
   Menu,
   X,
   ShoppingCart,
+  Heart,
   User,
   Sparkles,
   Search,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cartService } from "../utils/cartService";
+import { wishlistService } from "../utils/wishlistService";
 import { useAppSelector } from "../hooks";
 import { productApi } from "../utils/api";
 import type { ProductSummary } from "../types/types";
@@ -26,6 +28,7 @@ const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [cartItemCount, setCartItemCount] = useState(0);
+  const [wishlistCount, setWishlistCount] = useState(0);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<ProductSummary[]>([]);
@@ -55,7 +58,7 @@ const Header: React.FC = () => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
@@ -97,7 +100,7 @@ const Header: React.FC = () => {
   const toggleSearch = () => {
     const newState = !isSearchOpen;
     setIsSearchOpen(newState);
-    
+
     if (newState) {
       // Use requestAnimationFrame for better timing with animations
       requestAnimationFrame(() => {
@@ -140,9 +143,17 @@ const Header: React.FC = () => {
       const count = await cartService.getCartCount();
       setCartItemCount(count);
     };
+    const updateWishlistCount = () => {
+      setWishlistCount(wishlistService.getCount());
+    };
     updateCartCount();
+    updateWishlistCount();
     window.addEventListener("cartUpdated", updateCartCount);
-    return () => window.removeEventListener("cartUpdated", updateCartCount);
+    window.addEventListener("wishlistUpdated", updateWishlistCount);
+    return () => {
+      window.removeEventListener("cartUpdated", updateCartCount);
+      window.removeEventListener("wishlistUpdated", updateWishlistCount);
+    };
   }, []);
 
   const saveRecentSearch = (term: string) => {
@@ -180,10 +191,9 @@ const Header: React.FC = () => {
   };
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
-    `relative font-medium transition-colors pb-1 after:content-[''] after:absolute after:left-0 after:-bottom-[2px] after:h-[2px] after:w-full after:scale-x-0 after:origin-right after:transition-transform after:duration-300 ${
-      isActive
-        ? "text-rose-600 after:scale-x-100 after:origin-left after:bg-rose-600"
-        : "text-zinc-800 hover:text-rose-600 hover:after:scale-x-100 hover:after:origin-left after:bg-rose-300"
+    `relative font-medium transition-colors pb-1 after:content-[''] after:absolute after:left-0 after:-bottom-[2px] after:h-[2px] after:w-full after:scale-x-0 after:origin-right after:transition-transform after:duration-300 ${isActive
+      ? "text-rose-600 after:scale-x-100 after:origin-left after:bg-rose-600"
+      : "text-zinc-800 hover:text-rose-600 hover:after:scale-x-100 hover:after:origin-left after:bg-rose-300"
     }`;
 
   return (
@@ -205,15 +215,13 @@ const Header: React.FC = () => {
             <NavLink to="/products" className={navClass}>
               Sản phẩm
             </NavLink>
-            <NavLink to="/about" className={navClass}>
-              Giới thiệu
-            </NavLink>
+
             <NavLink to="/contact" className={navClass}>
               Liên hệ
             </NavLink>
             {user?.role?.toLowerCase() === "admin" && (
               <NavLink to="/admin" className={navClass}>
-                Quản trị mỹ phẩm
+                Quản trị
               </NavLink>
             )}
           </nav>
@@ -409,6 +417,24 @@ const Header: React.FC = () => {
               </AnimatePresence>
             </div>
 
+            {/* Wishlist */}
+            <Link
+              to="/favorites"
+              className="relative p-2 text-zinc-800 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+              title="Sản phẩm yêu thích"
+            >
+              <Heart className="h-5 w-5" />
+              {wishlistCount > 0 && (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1 -right-1 bg-rose-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold"
+                >
+                  {wishlistCount}
+                </motion.span>
+              )}
+            </Link>
+
             {/* Cart */}
             <Link
               to="/cart"
@@ -472,6 +498,19 @@ const Header: React.FC = () => {
                           <Package className="h-4 w-4 mr-2" />
                           Đơn hàng của tôi
                         </Link>
+                        <Link
+                          to="/favorites"
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <Heart className="h-4 w-4 mr-2 text-rose-500" />
+                          Sản phẩm yêu thích
+                          {wishlistCount > 0 && (
+                            <span className="ml-auto text-xs bg-rose-100 text-rose-600 px-2 py-0.5 rounded-full">
+                              {wishlistCount}
+                            </span>
+                          )}
+                        </Link>
                         <hr className="my-1" />
                         <button
                           onClick={handleLogout}
@@ -505,6 +544,18 @@ const Header: React.FC = () => {
             >
               <Search className="h-5 w-5" />
             </button>
+            <Link
+              to="/favorites"
+              className="relative p-2 text-zinc-800 hover:text-rose-600 transition-colors"
+              aria-label="Favorites"
+            >
+              <Heart className="h-5 w-5" />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
+                  {wishlistCount}
+                </span>
+              )}
+            </Link>
             <Link
               to="/cart"
               className="relative p-2 text-zinc-800 hover:text-purple-600 transition-colors"
@@ -711,10 +762,9 @@ const Header: React.FC = () => {
               <NavLink
                 to="/"
                 className={({ isActive }) =>
-                  `block w-full px-3 py-2.5 rounded-md text-base font-medium text-center ${
-                    isActive
-                      ? "bg-purple-100 text-purple-700"
-                      : "text-zinc-700 hover:bg-purple-50 hover:text-purple-600"
+                  `block w-full px-3 py-2.5 rounded-md text-base font-medium text-center ${isActive
+                    ? "bg-purple-100 text-purple-700"
+                    : "text-zinc-700 hover:bg-purple-50 hover:text-purple-600"
                   }`
                 }
                 onClick={toggleMobileMenu}
@@ -724,10 +774,9 @@ const Header: React.FC = () => {
               <NavLink
                 to="/products"
                 className={({ isActive }) =>
-                  `block w-full px-3 py-2.5 rounded-md text-base font-medium text-center ${
-                    isActive
-                      ? "bg-purple-100 text-purple-700"
-                      : "text-zinc-700 hover:bg-purple-50 hover:text-purple-600"
+                  `block w-full px-3 py-2.5 rounded-md text-base font-medium text-center ${isActive
+                    ? "bg-purple-100 text-purple-700"
+                    : "text-zinc-700 hover:bg-purple-50 hover:text-purple-600"
                   }`
                 }
                 onClick={toggleMobileMenu}
@@ -737,10 +786,9 @@ const Header: React.FC = () => {
               <NavLink
                 to="/about"
                 className={({ isActive }) =>
-                  `block w-full px-3 py-2.5 rounded-md text-base font-medium text-center ${
-                    isActive
-                      ? "bg-purple-100 text-purple-700"
-                      : "text-zinc-700 hover:bg-purple-50 hover:text-purple-600"
+                  `block w-full px-3 py-2.5 rounded-md text-base font-medium text-center ${isActive
+                    ? "bg-purple-100 text-purple-700"
+                    : "text-zinc-700 hover:bg-purple-50 hover:text-purple-600"
                   }`
                 }
                 onClick={toggleMobileMenu}
@@ -750,25 +798,35 @@ const Header: React.FC = () => {
               <NavLink
                 to="/contact"
                 className={({ isActive }) =>
-                  `block w-full px-3 py-2.5 rounded-md text-base font-medium text-center ${
-                    isActive
-                      ? "bg-purple-100 text-purple-700"
-                      : "text-zinc-700 hover:bg-purple-50 hover:text-purple-600"
+                  `block w-full px-3 py-2.5 rounded-md text-base font-medium text-center ${isActive
+                    ? "bg-purple-100 text-purple-700"
+                    : "text-zinc-700 hover:bg-purple-50 hover:text-purple-600"
                   }`
                 }
                 onClick={toggleMobileMenu}
               >
                 Liên hệ
               </NavLink>
-              
+              <NavLink
+                to="/favorites"
+                className={({ isActive }) =>
+                  `block w-full px-3 py-2.5 rounded-md text-base font-medium text-center ${isActive
+                    ? "bg-rose-100 text-rose-700"
+                    : "text-zinc-700 hover:bg-rose-50 hover:text-rose-600"
+                  }`
+                }
+                onClick={toggleMobileMenu}
+              >
+                Yêu thích {wishlistCount > 0 ? `(${wishlistCount})` : ""}
+              </NavLink>
+
               {user?.role?.toLowerCase() === "admin" && (
                 <NavLink
                   to="/admin"
                   className={({ isActive }) =>
-                    `block w-full px-3 py-2.5 rounded-md text-base font-medium text-center ${
-                      isActive
-                        ? "bg-purple-100 text-purple-700"
-                        : "text-zinc-700 hover:bg-purple-50 hover:text-purple-600"
+                    `block w-full px-3 py-2.5 rounded-md text-base font-medium text-center ${isActive
+                      ? "bg-purple-100 text-purple-700"
+                      : "text-zinc-700 hover:bg-purple-50 hover:text-purple-600"
                     }`
                   }
                   onClick={toggleMobileMenu}
@@ -815,6 +873,14 @@ const Header: React.FC = () => {
                     >
                       <Package className="h-5 w-5 mr-3" />
                       Đơn hàng của tôi
+                    </Link>
+                    <Link
+                      to="/favorites"
+                      className="flex items-center px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                      onClick={toggleMobileMenu}
+                    >
+                      <Heart className="h-5 w-5 mr-3 text-rose-500" />
+                      Sản phẩm yêu thích
                     </Link>
                     <button
                       onClick={handleLogout}

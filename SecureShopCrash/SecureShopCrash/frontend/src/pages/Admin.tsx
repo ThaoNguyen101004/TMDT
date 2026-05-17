@@ -13,8 +13,11 @@ import {
   MessageSquare, 
   BarChart3,
   Warehouse,
-  Star
+  Star,
+  Palette
 } from 'lucide-react';
+import UICustomizer from './admin/UICustomizer';
+import AdminChatbot from '../components/admin-modal/AdminChatbot';
 
 // Type for admin modules
 interface AdminModule {
@@ -34,7 +37,9 @@ type TabKey =
   | 'articles'
   | 'tickets'
   | 'analytics'
-  | 'reviews';
+  | 'reviews'
+  | 'ui'
+  | 'combos';
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'dashboard', label: 'Tổng quan', icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -49,7 +54,12 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'tickets', label: 'Hỗ trợ', icon: <MessageSquare className="w-5 h-5" /> },
   { key: 'reviews', label: 'Đánh giá', icon: <Star className="w-5 h-5" /> },
   { key: 'analytics', label: 'Thống kê', icon: <BarChart3 className="w-5 h-5" /> },
+  { key: 'ui', label: 'Giao diện', icon: <Palette className="w-5 h-5" /> },
+  { key: 'combos', label: 'Quản Lý Combo', icon: <Package className="w-5 h-5" /> },
 ];
+
+// Wrapper defined outside to keep stable reference
+const UICustomizerWrapper: React.FC<any> = (props) => <UICustomizer {...props} />;
 
 const Admin: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('dashboard');
@@ -211,6 +221,22 @@ const Admin: React.FC = () => {
             setData(d);
             break;
           }
+          case 'ui': {
+            if (!mounted) return;
+            setLoadedComponent(() => UICustomizerWrapper);
+            setCurrentLoadData(() => () => Promise.resolve(null));
+            setData(null);
+            break;
+          }
+          case 'combos': {
+            const mod = await import('./admin/Combos') as AdminModule;
+            if (!mounted) return;
+            setLoadedComponent(() => mod.default);
+            setCurrentLoadData(() => mod.loadData || (() => Promise.resolve(null)));
+            const d = await (mod.loadData?.() ?? null);
+            setData(d);
+            break;
+          }
           default:
             break;
         }
@@ -300,6 +326,7 @@ const Admin: React.FC = () => {
       </main>
 
       <Footer />
+      <AdminChatbot />
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { chatApi } from "../../utils/api";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type Suggestion = { id: string; name: string; price?: string | number; thumbnailUrl?: string };
 
@@ -12,11 +13,16 @@ type ChatMsg = {
 
 export default function ChatPanel({ onClose, fullscreen }: { onClose?: () => void; fullscreen?: boolean }) {
   const [messages, setMessages] = useState<ChatMsg[]>([
-    { role: "assistant", content: "Xin chào! Mình có thể giúp gì: chính sách đổi trả, cách đặt hàng, sản phẩm bán chạy, hay tư vấn chọn sản phẩm?" },
+    { role: "assistant", content: "Xin chào! Mình là Lumière Beauty Assistant. Mình có thể tư vấn sản phẩm, giúp bạn theo dõi đơn hàng, hoặc giải đáp các thắc mắc về chính sách. Bạn cần hỗ trợ gì ạ?" },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  
+  // Tạo chatId duy nhất cho mỗi session
+  const chatId = useMemo(() => {
+    return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
+  }, []);
 
   const canSend = useMemo(() => input.trim().length > 0 && !loading, [input, loading]);
 
@@ -28,21 +34,77 @@ export default function ChatPanel({ onClose, fullscreen }: { onClose?: () => voi
     const msg = (text ?? input).trim();
     if (!msg) return;
     setInput("");
+    
+    // Thêm tin nhắn của user
     setMessages((m) => [...m, { role: "user", content: msg }]);
     setLoading(true);
+    
+    // Thêm tin nhắn assistant rỗng để bắt đầu hiệu ứng stream
+    setMessages((m) => [...m, { role: "assistant", content: "" }]);
+    
     try {
-      const res = await chatApi.ask(msg);
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content: res.answer || "Mình đã ghi nhận câu hỏi nhé.",
-          suggestions: res.suggestions as Suggestion[] | undefined,
-          sources: (res as any).sources,
-        },
-      ]);
-    } catch {
-      setMessages((m) => [...m, { role: "assistant", content: "Xin lỗi, hệ thống bận. Vui lòng thử lại sau." }]);
+      const response = await fetch(`http://localhost:12345/api/chat/stream?message=${encodeURIComponent(msg)}&chatId=${chatId}`);
+      if (!response.body) throw new Error("No response body");
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      
+      let done = false;
+      let buffer = "";
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        if (value) {
+          buffer += decoder.decode(value, { stream: true });
+          
+          let parsedText = "";
+          const events = buffer.split('\n\n');
+          buffer = events.pop() || ""; // giữ lại phần chưa hoàn chỉnh
+          
+          for (const event of events) {
+            if (event.trim() === "") continue;
+            const dataLines = event.split('\n').filter(line => line.startsWith('data:'));
+            const text = dataLines.map(line => {
+              // Spring WebFlux Flux<String> sends "data: " followed directly by the string without extra space padding.
+              // We just take everything after "data:"
+              return line.substring(5);
+            }).join('\n');
+            parsedText += text;
+          }
+
+          if (parsedText) {
+            setMessages((m) => {
+              const newMsgs = [...m];
+              const lastMsg = { ...newMsgs[newMsgs.length - 1] };
+              if (lastMsg.role === "assistant") {
+                let textToAppend = parsedText;
+                // Parse suggestions metadata if present
+                const prefixMatch = textToAppend.match(/___SUGGESTIONS___(.*?)___END_SUGGESTIONS___/s);
+                if (prefixMatch) {
+                  try {
+                    lastMsg.suggestions = JSON.parse(prefixMatch[1]);
+                  } catch (e) {
+                    console.error("Parse suggestions error", e);
+                  }
+                  textToAppend = textToAppend.replace(prefixMatch[0], "");
+                }
+                lastMsg.content += textToAppend;
+              }
+              newMsgs[newMsgs.length - 1] = lastMsg;
+              return newMsgs;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      setMessages((m) => {
+        const newMsgs = [...m];
+        const lastMsg = newMsgs[newMsgs.length - 1];
+        if (lastMsg.role === "assistant") {
+          lastMsg.content = "Xin lỗi, hệ thống bận. Vui lòng thử lại sau.";
+        }
+        return newMsgs;
+      });
     } finally {
       setLoading(false);
     }
@@ -75,37 +137,43 @@ export default function ChatPanel({ onClose, fullscreen }: { onClose?: () => voi
       <div ref={listRef} className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`${m.role === "user" ? "bg-indigo-600 text-white rounded-l-lg rounded-tr-lg" : "bg-white border rounded-r-lg rounded-tl-lg"} px-3 py-2 max-w-[85%] shadow-sm`}>
-              <div className="whitespace-pre-wrap leading-relaxed">{m.content}</div>
+            <div className={`${m.role === "user" ? "bg-indigo-600 text-white rounded-l-lg rounded-tr-lg" : "bg-white border rounded-r-lg rounded-tl-lg text-gray-800"} px-4 py-3 max-w-[85%] shadow-sm overflow-hidden prose prose-sm prose-indigo`}>
+              {m.role === "user" ? (
+                 <div className="whitespace-pre-wrap leading-relaxed">{m.content}</div>
+              ) : (
+                <>
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      a: ({ node, ...props }) => (
+                        <a {...props} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-800 underline font-medium" />
+                      )
+                    }}
+                  >
+                    {m.content}
+                  </ReactMarkdown>
 
-              {!!m.suggestions?.length && (
-                <div className="mt-2 grid grid-cols-1 gap-2">
-                  {m.suggestions.map((p) => (
-                    <a key={p.id} href={`/products/${p.id}`} className="flex items-center gap-3 p-2 rounded-md border hover:shadow transition bg-white">
-                      <div className="w-12 h-12 rounded bg-gray-100 overflow-hidden flex items-center justify-center">
-                        {p.thumbnailUrl ? (
-                          <img className="w-full h-full object-cover" src={p.thumbnailUrl} alt={p.name} />
-                        ) : (
-                          <svg width="24" height="24" viewBox="0 0 24 24" className="text-gray-400"><path d="M4 6h16v12H4z" fill="currentColor"/></svg>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium line-clamp-2">{p.name}</div>
-                        {p.price && <div className="text-xs text-emerald-600 font-semibold">{typeof p.price === "number" ? p.price.toLocaleString("vi-VN") + "₫" : p.price}</div>}
-                      </div>
-                      <svg width="18" height="18" viewBox="0 0 24 24" className="text-gray-400 group-hover:text-gray-600 transition"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </a>
-                  ))}
-                </div>
-              )}
-
-              {!!m.sources?.length && (
-                <div className="mt-2">
-                  <div className="text-[11px] text-gray-500">Nguồn tham khảo:</div>
-                  <ul className="mt-1 space-y-1">
-                    {m.sources.map((s, idx) => (<li key={idx} className="text-[11px] text-gray-500">• {s}</li>))}
-                  </ul>
-                </div>
+                  {!!m.suggestions?.length && (
+                    <div className="mt-3 grid grid-cols-1 gap-2 not-prose">
+                      {m.suggestions.map((p) => (
+                        <a key={p.id} href={`/products/${p.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-2 rounded-md border border-gray-200 hover:border-indigo-300 hover:shadow-md transition bg-white no-underline group">
+                          <div className="w-12 h-12 rounded bg-gray-50 border overflow-hidden flex items-center justify-center shrink-0">
+                            {p.thumbnailUrl ? (
+                              <img className="w-full h-full object-cover" src={p.thumbnailUrl} alt={p.name} />
+                            ) : (
+                              <svg width="24" height="24" viewBox="0 0 24 24" className="text-gray-400"><path d="M4 6h16v12H4z" fill="currentColor"/></svg>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-800 line-clamp-2 leading-tight group-hover:text-indigo-700 transition">{p.name}</div>
+                            {p.price && <div className="text-xs text-emerald-600 font-semibold mt-0.5">{typeof p.price === "number" ? p.price.toLocaleString("vi-VN") + "₫" : p.price}</div>}
+                          </div>
+                          <svg width="18" height="18" viewBox="0 0 24 24" className="text-gray-300 group-hover:text-indigo-500 transition shrink-0"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

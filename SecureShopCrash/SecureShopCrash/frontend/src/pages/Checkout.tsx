@@ -3,7 +3,7 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import {
-  MapPin, Phone, Mail, User, CreditCard, Truck, Package, Wallet,
+  MapPin, Phone, Mail, User, CreditCard, Truck, Package,
   CheckCircle, Edit, Tag, Clock, Shield, X, ChevronDown
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -11,9 +11,7 @@ import { toast } from 'react-toastify';
 import { useAppSelector } from '../hooks';
 import { cartService, type CartItem } from '../utils/cartService';
 import { DiscountApi, orderApi, AddressApi } from '../utils/api';
-import { vnpayApi } from '../utils/vnpayService';
-import { fetchProvinces, fetchDistricts as fetchDistrictsApi, fetchWards as fetchWardsApi } from '../utils/vietnamProvinces';
-import type { VNPayPaymentRequest } from '../types/vnpay';
+import AddressFields from '../components/AddressFields';
 import type { DiscountDetail } from '../types/types';
 
 // Address interface
@@ -39,7 +37,7 @@ interface ShippingInfo {
 }
 
 type ShippingMethod = 'standard' | 'express';
-type PaymentMethod = 'cod' | 'bank_transfer' | 'e_wallet';
+type PaymentMethod = 'cod' | 'bank_transfer';
 
 const Checkout: React.FC = () => {
   const location = useLocation();
@@ -66,16 +64,11 @@ const Checkout: React.FC = () => {
   const [errors, setErrors] = useState<Partial<ShippingInfo>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [availableCoupons, setAvailableCoupons] = useState<DiscountDetail[]>([]);
+  const [showCouponDropdown, setShowCouponDropdown] = useState(false);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
 
-  // Province/District/Ward State
-  const [provinces, setProvinces] = useState<any[]>([]);
-  const [districts, setDistricts] = useState<any[]>([]);
-  const [wards, setWards] = useState<any[]>([]);
-  const [selectedProvinceId, setSelectedProvinceId] = useState<string>('');
-  const [selectedDistrictId, setSelectedDistrictId] = useState<string>('');
-  const [loadingProvinces, setLoadingProvinces] = useState(false);
-  const [loadingDistricts, setLoadingDistricts] = useState(false);
-  const [loadingWards, setLoadingWards] = useState(false);
+  // No province/district API needed - using static 34-province list after merger
 
   // Address Management - IMPROVED
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
@@ -129,197 +122,26 @@ const Checkout: React.FC = () => {
 
   const calculateTotal = () => Math.max(calculateSubtotal() + shippingFees[shippingMethod] - calculateDiscount(), 0);
 
-  // Fetch Districts
-  const fetchDistricts = async (provinceId: string) => {
-    console.log('fetchDistricts called with provinceId:', provinceId);
-    setLoadingDistricts(true);
-    setDistricts([]);
-    setWards([]);
-    setSelectedDistrictId('');
-    try {
-      const results = await fetchDistrictsApi(provinceId);
-      console.log('Districts loaded:', results.length, results);
-      setDistricts(results);
-      if (results.length === 0) {
-        toast.warning('Không tải được quận/huyện, vui lòng nhập thủ công');
-      }
-    } catch (err) {
-      console.error('Error fetching districts:', err);
-      toast.error('Lỗi tải quận/huyện!');
-    } finally {
-      setLoadingDistricts(false);
-    }
-  };
 
-  // Fetch Wards
-  const fetchWards = async (districtId: string) => {
-    console.log('fetchWards called with districtId:', districtId);
-    setLoadingWards(true);
-    setWards([]);
-    try {
-      const results = await fetchWardsApi(districtId);
-      console.log('Wards loaded:', results.length, results);
-      setWards(results);
-      if (results.length === 0) {
-        toast.warning('Không tải được phường/xã, vui lòng nhập thủ công');
-      }
-    } catch (err) {
-      console.error('Error fetching wards:', err);
-      toast.error('Lỗi tải phường/xã!');
-    } finally {
-      setLoadingWards(false);
-    }
-  };
-
-  // Load Address Into Form - using new API
-  const loadAddressIntoForm = React.useCallback(async (address: Address) => {
-    console.log('loadAddressIntoForm called with:', address);
-    
-    // Parse district and city from province field (format: "District, City")
-    const [district, city] = address.province.includes(',') 
-      ? address.province.split(',').map(s => s.trim())
-      : ['', address.province];
-
-    console.log('Parsed address - city:', city, 'district:', district);
-
-    // Auto-select province
-    const province = provinces.find(p => 
-      p.province_name === city || p.province_name.includes(city)
-    );
-    
-    console.log('Found province:', province);
-    
-    if (province) {
-      setSelectedProvinceId(province.province_id);
-      
-      // Fetch districts using new API
-      try {
-        const districtResults = await fetchDistrictsApi(province.province_id);
-        console.log('Loaded districts for form:', districtResults.length);
-        setDistricts(districtResults);
-        
-        // Find matching district by name (normalize comparison)
-        const districtMatch = districtResults.find((d: any) => {
-          const normalizedApiName = d.district_name.toLowerCase().trim();
-          const normalizedStoredName = district.toLowerCase().trim();
-          return normalizedApiName === normalizedStoredName || 
-                 normalizedApiName.includes(normalizedStoredName) ||
-                 normalizedStoredName.includes(normalizedApiName);
-        });
-
-        console.log('District match:', districtMatch);
-
-        if (districtMatch) {
-          setSelectedDistrictId(districtMatch.district_id);
-          
-          // Fetch wards using new API
-          const wardResults = await fetchWardsApi(districtMatch.district_id);
-          console.log('Loaded wards for form:', wardResults.length);
-          setWards(wardResults);
-          
-          // Find matching ward by name (normalize comparison)
-          const wardMatch = wardResults.find((w: any) => {
-            const normalizedApiName = w.ward_name.toLowerCase().trim();
-            const normalizedStoredName = address.ward.toLowerCase().trim();
-            return normalizedApiName === normalizedStoredName || 
-                   normalizedApiName.includes(normalizedStoredName) ||
-                   normalizedStoredName.includes(normalizedApiName);
-          });
-          
-          // Set shipping info with matched names from API (ensures consistency)
-          setShippingInfo(prev => ({
-            ...prev,
-            fullName: address.name || user?.name || '',
-            phone: address.phone || user?.phone || '',
-            email: user?.email || '',
-            address: address.street,
-            city: province.province_name,
-            district: districtMatch.district_name,
-            ward: wardMatch ? wardMatch.ward_name : address.ward,
-          }));
-        } else {
-          // District not found - still set info
-          console.warn('District not found in API:', district);
-          setShippingInfo(prev => ({
-            ...prev,
-            fullName: address.name || user?.name || '',
-            phone: address.phone || user?.phone || '',
-            email: user?.email || '',
-            address: address.street,
-            city: province.province_name,
-            district: district,
-            ward: address.ward,
-          }));
-        }
-      } catch (error) {
-        console.error('Error loading address location data:', error);
-        // Set basic info even on error
-        setShippingInfo(prev => ({
-          ...prev,
-          fullName: address.name || user?.name || '',
-          phone: address.phone || user?.phone || '',
-          email: user?.email || '',
-          address: address.street,
-          city: province.province_name,
-          district: district,
-          ward: address.ward,
-        }));
-      }
-    } else {
-      // Province not found - set basic info
-      console.warn('Province not found:', city);
-      setShippingInfo(prev => ({
-        ...prev,
-        fullName: address.name || user?.name || '',
-        phone: address.phone || user?.phone || '',
-        email: user?.email || '',
-        address: address.street,
-        city: city,
-        district: district,
-        ward: address.ward,
-      }));
-    }
-  }, [provinces, user]);
-// Handle Address Change
+  // Load saved address into form (2-level: province + ward)
+  const loadAddressIntoForm = React.useCallback((address: Address) => {
+    // province field may store "Xã/Phường, Tỉnh" or just "Tỉnh"
+    const parts = address.province.split(',').map(s => s.trim());
+    const city = parts.length > 1 ? parts[parts.length - 1] : parts[0];
+    setShippingInfo(prev => ({
+      ...prev,
+      fullName: address.name || user?.name || '',
+      phone: address.phone || user?.phone || '',
+      email: user?.email || '',
+      address: address.street,
+      city,
+      district: '',
+      ward: address.ward,
+    }));
+  }, [user]);
+  // Handle address field changes (2-level: province + ward text)
   const handleAddressChange = (name: keyof ShippingInfo, value: string) => {
-    console.log('handleAddressChange called:', { name, value });
-    if (name === 'city') {
-      const province = provinces.find(p => p.province_id === value);
-      console.log('Found province:', province);
-      setSelectedProvinceId(value);
-      setShippingInfo(prev => ({
-        ...prev,
-        city: province?.province_name || '',
-        district: '',
-        ward: ''
-      }));
-      if (value) {
-        console.log('Calling fetchDistricts with:', value);
-        fetchDistricts(value);
-      } else {
-        setDistricts([]);
-        setWards([]);
-      }
-    } else if (name === 'district') {
-      const district = districts.find(d => d.district_id === value);
-      console.log('Found district:', district);
-      setSelectedDistrictId(value);
-      setShippingInfo(prev => ({
-        ...prev,
-        district: district?.district_name || '',
-        ward: ''
-      }));
-      if (value) {
-        console.log('Calling fetchWards with:', value);
-        fetchWards(value);
-      } else setWards([]);
-    } else if (name === 'ward') {
-      const ward = wards.find(w => w.ward_id === value);
-      console.log('Found ward:', ward);
-      setShippingInfo(prev => ({ ...prev, ward: ward?.ward_name || '' }));
-    } else {
-      setShippingInfo(prev => ({ ...prev, [name]: value }));
-    }
+    setShippingInfo(prev => ({ ...prev, [name]: value }));
   };
 
   // Handle Select Saved Address - NEW
@@ -370,15 +192,7 @@ const Checkout: React.FC = () => {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shippingInfo.email)) newErrors.email = 'Email không hợp lệ';
     if (!shippingInfo.address.trim()) newErrors.address = 'Vui lòng nhập địa chỉ chi tiết';
     if (!shippingInfo.city) newErrors.city = 'Vui lòng chọn tỉnh/thành phố';
-    if (!shippingInfo.district) newErrors.district = 'Vui lòng chọn quận/huyện';
-    if (!shippingInfo.ward) newErrors.ward = 'Vui lòng chọn phường/xã';
-
-    // Debug log
-    if (Object.keys(newErrors).length > 0) {
-      console.log('Validation errors:', newErrors);
-      console.log('Current shippingInfo:', shippingInfo);
-    }
-
+    if (!shippingInfo.ward.trim()) newErrors.ward = 'Vui lòng nhập xã/phường';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -416,13 +230,36 @@ const Checkout: React.FC = () => {
     toast.info('Đã xóa mã giảm giá');
   };
 
+  // Fetch danh sách mã giảm giá còn hợp lệ
+  const fetchAvailableCoupons = async () => {
+    if (availableCoupons.length > 0) { setShowCouponDropdown(true); return; }
+    setLoadingCoupons(true);
+    setShowCouponDropdown(true);
+    try {
+      // Dùng public endpoint /discounts/active — không cần auth
+      const data = await DiscountApi.getActive();
+      const list: DiscountDetail[] = Array.isArray(data) ? data : (data.content ?? []);
+      setAvailableCoupons(list);
+    } catch {
+      // silent fail
+    } finally {
+      setLoadingCoupons(false);
+    }
+  };
+
+  // Chọn mã từ dropdown
+  const handleSelectCoupon = (code: string) => {
+    setCouponCode(code);
+    setShowCouponDropdown(false);
+  };
+
   // Handle Place Order
   const handlePlaceOrder = async () => {
     if (!validateForm()) return toast.error('Vui lòng kiểm tra lại thông tin!');
 
     setIsSubmitting(true);
     try {
-      const orderItems = cartItems.map(item => ({ productId: item.productId, quantity: item.quantity }));
+      const orderItems = cartItems.map(item => ({ productId: item.productId, quantity: item.quantity, comboId: item.comboId || null }));
       const shippingAddressMap: Record<string, string> = {
         fullName: shippingInfo.fullName,
         phone: shippingInfo.phone,
@@ -444,19 +281,14 @@ const Checkout: React.FC = () => {
 
       const createdOrder = await orderApi.create(orderRequest);
 
-      if (paymentMethod === 'e_wallet') {
-        const vnpayRequest: VNPayPaymentRequest = {
-          orderId: createdOrder.id,
-          amount: Math.round(calculateTotal()),
-          orderInfo: `Thanh toan don hang ${createdOrder.id.substring(0, 8)}`,
-          language: 'vn'
-        };
-        const res = await vnpayApi.createPaymentUrl(vnpayRequest);
-        if (res.code === '00' && res.paymentUrl) {
-          window.location.href = res.paymentUrl;
-          return;
-        }
-        toast.error('Không thể tạo link thanh toán VNPay');
+      if (!location.state?.product) {
+        for (const item of cartItems) await cartService.removeItem(item.productId, item.comboId);
+        window.dispatchEvent(new Event('cartUpdated'));
+      }
+
+      if (paymentMethod === 'bank_transfer') {
+        toast.success('Đặt hàng thành công! Vui lòng quét mã QR để thanh toán.');
+        navigate('/payment/bank-transfer', { state: { orderId: createdOrder.id } });
         return;
       }
 
@@ -476,11 +308,6 @@ const Checkout: React.FC = () => {
         status: createdOrder.status,
         paymentStatus: createdOrder.paymentStatus
       };
-
-      if (location.state?.cartItems) {
-        for (const item of cartItems) await cartService.removeItem(item.productId);
-        window.dispatchEvent(new Event('cartUpdated'));
-      }
 
       toast.success('Đặt hàng thành công!');
       navigate('/order-success', { state: { orderData } });
@@ -530,25 +357,7 @@ const Checkout: React.FC = () => {
     window.scrollTo(0, 0);
   }, [location.state, navigate]);
 
-  // Load Provinces
-  useEffect(() => {
-    const loadProvinces = async () => {
-      setLoadingProvinces(true);
-      try {
-        const results = await fetchProvinces();
-        setProvinces(results);
-        if (results.length === 0) {
-          toast.error('Không thể tải danh sách tỉnh/thành!');
-        }
-      } catch (err) {
-        console.error('Error loading provinces:', err);
-        toast.error('Lỗi tải danh sách tỉnh/thành!');
-      } finally {
-        setLoadingProvinces(false);
-      }
-    };
-    loadProvinces();
-  }, []);
+  // No API needed for provinces - static list used
 
   // Load Saved Addresses - fetch from backend regardless of provinces
   useEffect(() => {
@@ -588,9 +397,9 @@ const Checkout: React.FC = () => {
     loadSavedAddresses();
   }, [user]);
 
-  // Auto-select default address once both addresses and provinces are loaded
+  // Auto-select default address once addresses are loaded
   useEffect(() => {
-    if (savedAddresses.length === 0 || provinces.length === 0) return;
+    if (savedAddresses.length === 0) return;
     if (selectedAddressId !== null) return; // Already selected
 
     const defaultAddr = savedAddresses.find((addr: Address) => addr.isDefault);
@@ -601,7 +410,8 @@ const Checkout: React.FC = () => {
       loadAddressIntoForm(addressToLoad);
       setIsEditingAddress(false);
     }
-  }, [savedAddresses, provinces.length, selectedAddressId, loadAddressIntoForm]);
+  }, [savedAddresses, selectedAddressId, loadAddressIntoForm]);
+
 
   // Debug log for loading state
   console.log('=== Checkout Render ===', {
@@ -790,75 +600,25 @@ const Checkout: React.FC = () => {
                     {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Tỉnh/Thành phố *</label>
-                      <select 
-                        value={selectedProvinceId} 
-                        onChange={e => handleAddressChange('city', e.target.value)}
-                        disabled={loadingProvinces}
-                        className={`w-full px-4 py-2.5 border rounded-lg ${errors.city ? 'border-red-500' : 'border-gray-300'} focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
-                      >
-                        <option value="">{loadingProvinces ? 'Đang tải...' : '-- Chọn tỉnh/thành --'}</option>
-                        {provinces.map(p => (
-                          <option key={p.province_id} value={p.province_id}>{p.province_name}</option>
-                        ))}
-                      </select>
-                      {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Quận/Huyện *</label>
-                      <select 
-                        value={selectedDistrictId} 
-                        onChange={e => handleAddressChange('district', e.target.value)}
-                        disabled={!selectedProvinceId || loadingDistricts}
-                        className={`w-full px-4 py-2.5 border rounded-lg ${errors.district ? 'border-red-500' : 'border-gray-300'} focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
-                      >
-                        <option value="">{loadingDistricts ? 'Đang tải...' : '-- Chọn quận/huyện --'}</option>
-                        {districts.map(d => (
-                          <option key={d.district_id} value={d.district_id}>{d.district_name}</option>
-                        ))}
-                      </select>
-                      {errors.district && <p className="text-red-500 text-xs mt-1">{errors.district}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Phường/Xã *</label>
-                      <select 
-                        value={wards.find(w => w.ward_name === shippingInfo.ward)?.ward_id || ''}
-                        onChange={e => handleAddressChange('ward', e.target.value)}
-                        disabled={!selectedDistrictId || loadingWards}
-                        className={`w-full px-4 py-2.5 border rounded-lg ${errors.ward ? 'border-red-500' : 'border-gray-300'} focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
-                      >
-                        <option value="">{loadingWards ? 'Đang tải...' : '-- Chọn phường/xã --'}</option>
-                        {wards.map(w => (
-                          <option key={w.ward_id} value={w.ward_id}>{w.ward_name}</option>
-                        ))}
-                      </select>
-                      {errors.ward && <p className="text-red-500 text-xs mt-1">{errors.ward}</p>}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Ghi chú (không bắt buộc)</label>
-                    <textarea 
-                      value={shippingInfo.note} 
-                      onChange={e => handleAddressChange('note', e.target.value)}
-                      rows={3} 
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      placeholder="Ghi chú về thời gian giao hàng..." 
-                    />
-                  </div>
+                  <AddressFields
+                    province={shippingInfo.city}
+                    district={shippingInfo.district}
+                    ward={shippingInfo.ward}
+                    onProvinceChange={(name, _id) => { handleAddressChange('city', name); handleAddressChange('district', ''); handleAddressChange('ward', ''); }}
+                    onDistrictChange={(name, _id) => { handleAddressChange('district', name); handleAddressChange('ward', ''); }}
+                    onWardChange={name => handleAddressChange('ward', name)}
+                    errorProvince={errors.city}
+                    errorWard={errors.ward}
+                  />
 
                   <div className="flex gap-3">
-                    <button 
+                    <button
                       onClick={handleCancelEditing}
                       className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-medium transition-colors"
                     >
                       Hủy
                     </button>
-                    <button 
+                    <button
                       onClick={handleSaveAddress}
                       className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-medium transition-colors"
                     >
@@ -868,15 +628,14 @@ const Checkout: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-4 text-gray-700">
-                  <p><strong>{shippingInfo.fullName}</strong> - {shippingInfo.phone}</p>
-                  <p>{shippingInfo.email}</p>
-                  <div className="text-sm space-y-1">
-                    <p><strong>Địa chỉ:</strong> {shippingInfo.address || <span className="text-red-500">Chưa có</span>}</p>
-                    <p><strong>Phường/Xã:</strong> {shippingInfo.ward || <span className="text-red-500">Chưa chọn</span>}</p>
-                    <p><strong>Quận/Huyện:</strong> {shippingInfo.district || <span className="text-red-500">Chưa chọn</span>}</p>
-                    <p><strong>Tỉnh/Thành:</strong> {shippingInfo.city || <span className="text-red-500">Chưa chọn</span>}</p>
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-gray-900">{shippingInfo.fullName}</span>
+                    <span className="text-sm text-gray-600">{shippingInfo.phone} · {shippingInfo.email}</span>
+                    <span className="text-sm text-gray-600 mt-1">
+                      {[shippingInfo.address, shippingInfo.ward, shippingInfo.city].filter(Boolean).join(", ")}
+                    </span>
+                    {shippingInfo.note && <p className="text-sm italic text-gray-500">Ghi chú: {shippingInfo.note}</p>}
                   </div>
-                  {shippingInfo.note && <p className="text-sm italic">Ghi chú: {shippingInfo.note}</p>}
                 </div>
               )}
             </motion.div>
@@ -1003,30 +762,7 @@ const Checkout: React.FC = () => {
                       <CreditCard className="h-5 w-5 text-blue-600" />
                       <div>
                         <p className="font-medium text-gray-900">Chuyển khoản ngân hàng</p>
-                        <p className="text-sm text-gray-600">Chuyển khoản qua ATM/Internet Banking</p>
-                      </div>
-                    </div>
-                  </div>
-                  <Shield className="h-5 w-5 text-green-600" />
-                </label>
-
-                <label className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                  paymentMethod === 'e_wallet' ? 'border-purple-600 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
-                }`}>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="e_wallet"
-                      checked={paymentMethod === 'e_wallet'}
-                      onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                      className="w-4 h-4 text-purple-600"
-                    />
-                    <div className="flex items-center gap-2">
-                      <Wallet className="h-5 w-5 text-blue-600" />
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">Thanh toán qua VNPay</p>
-                        <p className="text-sm text-gray-600">Thanh toán qua ví điện tử, thẻ ATM, thẻ quốc tế</p>
+                        <p className="text-sm text-gray-600">Quét mã QR — chuyển đúng số tiền & nội dung đơn</p>
                       </div>
                     </div>
                   </div>
@@ -1091,47 +827,115 @@ const Checkout: React.FC = () => {
 
             <div className="mt-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">Mã giảm giá</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                  placeholder="Nhập mã giảm giá (VD: GIAM10)"
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-                {appliedCoupon ? (
-                  <button
-                    onClick={handleRemoveCoupon}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 
-                              flex items-center gap-1 whitespace-nowrap w-[110px] justify-center transition-colors"
-                  >
+
+              {/* Applied coupon badge */}
+              {appliedCoupon && (
+                <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-green-600" />
+                    <span className="font-semibold text-green-700">{appliedCoupon.code}</span>
+                    <span className="text-sm text-green-600">
+                      {appliedCoupon.discountType === 'PERCENT'
+                        ? `Giảm ${appliedCoupon.discountValue}%`
+                        : appliedCoupon.discountType === 'FREE_SHIP'
+                        ? 'Miễn phí vận chuyển'
+                        : `Giảm ${new Intl.NumberFormat('vi-VN').format(appliedCoupon.discountValue)}đ`}
+                    </span>
+                  </div>
+                  <button onClick={handleRemoveCoupon} className="text-red-500 hover:text-red-700 transition-colors">
                     <X className="h-4 w-4" />
-                    Xóa
                   </button>
-                ) : (
-                  isApplyingCoupon ? (
-                    <button
-                      disabled
-                      className="px-4 py-2 bg-gray-400 text-white rounded-lg 
-                                flex items-center gap-1 cursor-not-allowed whitespace-nowrap 
-                                w-[110px] justify-center"
-                    >
-                      <Tag className="h-4 w-4" />
-                      Đang kiểm tra...
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleApplyCoupon}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg 
-                                hover:bg-purple-700 flex items-center gap-1 whitespace-nowrap 
-                                w-[110px] justify-center transition-colors"
-                    >
-                      <Tag className="h-4 w-4" />
-                      Áp dụng
-                    </button>
-                  )
-                )}
-              </div>
+                </div>
+              )}
+
+              {!appliedCoupon && (
+                <div className="relative">
+                  {/* Input + nút */}
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={e => { setCouponCode(e.target.value.toUpperCase()); }}
+                        onFocus={fetchAvailableCoupons}
+                        placeholder="Nhập hoặc chọn mã giảm giá..."
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent pr-8"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => showCouponDropdown ? setShowCouponDropdown(false) : fetchAvailableCoupons()}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-purple-600 transition-colors"
+                      >
+                        <ChevronDown className={`h-4 w-4 transition-transform ${showCouponDropdown ? 'rotate-180' : ''}`} />
+                      </button>
+                    </div>
+                    {isApplyingCoupon ? (
+                      <button disabled className="px-4 py-2 bg-gray-400 text-white rounded-lg flex items-center gap-1 cursor-not-allowed whitespace-nowrap w-[110px] justify-center">
+                        <Tag className="h-4 w-4" />
+                        Đang kiểm tra...
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleApplyCoupon}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-1 whitespace-nowrap w-[110px] justify-center transition-colors"
+                      >
+                        <Tag className="h-4 w-4" />
+                        Áp dụng
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Dropdown danh sách mã */}
+                  {showCouponDropdown && (
+                    <div className="absolute z-50 top-full left-0 right-[118px] mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {loadingCoupons ? (
+                        <div className="px-4 py-3 text-sm text-gray-500 flex items-center gap-2">
+                          <svg className="animate-spin w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                          </svg>
+                          Đang tải mã giảm giá...
+                        </div>
+                      ) : availableCoupons.length === 0 ? (
+                        <div className="px-4 py-3 text-sm text-gray-500">Không có mã giảm giá khả dụng</div>
+                      ) : (
+                        availableCoupons
+                          .filter(c => !couponCode || c.code.includes(couponCode))
+                          .map(coupon => (
+                            <button
+                              key={coupon.id}
+                              type="button"
+                              onClick={() => handleSelectCoupon(coupon.code)}
+                              className="w-full text-left px-4 py-3 hover:bg-purple-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="font-semibold text-purple-700">{coupon.code}</span>
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    {coupon.discountType === 'PERCENT'
+                                      ? `Giảm ${coupon.discountValue}%`
+                                      : coupon.discountType === 'FREE_SHIP'
+                                      ? 'Miễn phí vận chuyển'
+                                      : `Giảm ${new Intl.NumberFormat('vi-VN').format(coupon.discountValue)}đ`}
+                                    {coupon.minOrderValue ? ` · Đơn tối thiểu ${new Intl.NumberFormat('vi-VN').format(coupon.minOrderValue)}đ` : ''}
+                                  </p>
+                                </div>
+                                <span className="text-xs text-gray-400">
+                                  HSD: {new Date(coupon.endAt).toLocaleDateString('vi-VN')}
+                                </span>
+                              </div>
+                            </button>
+                          ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Click outside to close */}
+              {showCouponDropdown && (
+                <div className="fixed inset-0 z-40" onClick={() => setShowCouponDropdown(false)} />
+              )}
             </div>
 
             <button

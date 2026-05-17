@@ -19,4 +19,6 @@ public class ArticleDTO implements Serializable {
     private Instant publishedAt;
     private Boolean active;
     private String adminName;
+    private String externalUrl;
+    private String imageUrl;
 }

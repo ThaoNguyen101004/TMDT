@@ -26,12 +26,12 @@ public interface CartService {
     /**
      * Cập nhật số lượng của một item
      */
-    void updateQuantity(UUID productId, int quantity);
+    void updateQuantity(UUID productId, UUID comboId, int quantity);
 
     /**
      * Xóa item khỏi cart
      */
-    void removeItem(UUID productId);
+    void removeItem(UUID productId, UUID comboId);
 
     /**
      * Xóa toàn bộ cart

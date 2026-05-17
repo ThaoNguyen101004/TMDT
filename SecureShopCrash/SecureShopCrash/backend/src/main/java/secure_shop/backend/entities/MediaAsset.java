@@ -3,7 +3,6 @@ package secure_shop.backend.entities;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
@@ -22,11 +21,7 @@ public class MediaAsset {
 
     @NotBlank(message = "URL anh khong duoc de trong")
     @Size(max = 2048, message = "URL anh qua dai (toi da 2048 ky tu)")
-    @Pattern(
-            regexp = "^(https?://)?([\\w-]+\\.)+[\\w-]+(/.*)?$",
-            message = "Duong dan URL anh khong hop le"
-    )
-    @Column(nullable = false)
+    @Column(nullable = false, length = 2048)
     private String url;
 
     @Size(max = 255, message = "Van ban thay the (alt text) toi da 255 ky tu")

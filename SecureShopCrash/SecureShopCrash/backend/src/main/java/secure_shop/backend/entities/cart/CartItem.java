@@ -16,5 +16,6 @@ public class CartItem implements Serializable {
     private String thumbnailUrl;
     private boolean inStock;
     private Integer availableStock;
+    private UUID comboId;
     private int quantity;
 }

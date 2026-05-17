@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Mã OTP Đăng nhập</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+<div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center;">
+    <h2 style="color: #4f46e5; margin-bottom: 20px;">Xác thực Đăng nhập</h2>
+    <p>Xin chào <strong><span th:text="${email}"></span></strong>,</p>
+    <p>Bạn vừa yêu cầu đăng nhập vào hệ thống SecureShop.</p>
+    <p>Đây là mã OTP của bạn để hoàn tất quá trình đăng nhập (có hiệu lực trong 5 phút):</p>
+    <div style="margin: 30px 0;">
+        <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #4f46e5; background-color: #e0e7ff; padding: 15px 30px; border-radius: 8px;" th:text="${otp}">123456</span>
+    </div>
+    <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.</p>
+    <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+    <p style="font-size: 12px; color: #888;">
+        Trân trọng,<br>
+        Đội ngũ SecureShop
+    </p>
+</div>
+</body>
+</html>

@@ -2,6 +2,7 @@ package secure_shop.backend.service;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import secure_shop.backend.dto.user.UpdateUserProfileRequest;
 import secure_shop.backend.dto.user.UserDTO;
 import secure_shop.backend.dto.user.UserProfileDTO;
 import secure_shop.backend.entities.User;
@@ -17,6 +18,7 @@ public interface UserService {
 
     User createUser(User user);
     User updateUser(UUID id, User user);
+    UserProfileDTO updateProfile(UUID id, UpdateUserProfileRequest request);
     void softDeleteUser(UUID id);
     UserDTO restoreUser(UUID userId);
     void disableUser(UUID userId);
@@ -40,4 +42,6 @@ public interface UserService {
     boolean updatePassword(String email, String newPassword);
 
     User registerUser(RegisterRequest request);
+
+
 }

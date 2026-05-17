@@ -92,7 +92,7 @@ public class CartServiceImpl implements CartService {
 
         // Kiểm tra xem sản phẩm đã có trong cart chưa
         Optional<CartItem> existing = cart.getItems().stream()
-                .filter(i -> i.getProductId().equals(item.getProductId()))
+                .filter(i -> i.getProductId().equals(item.getProductId()) && java.util.Objects.equals(i.getComboId(), item.getComboId()))
                 .findFirst();
 
         Integer maxQty = item.getAvailableStock() != null ? item.getAvailableStock() : 99;
@@ -137,7 +137,7 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public void updateQuantity(UUID productId, int quantity) {
+    public void updateQuantity(UUID productId, UUID comboId, int quantity) {
         if (productId == null) {
             throw new BadRequestException("ID sản phẩm không hợp lệ");
         }
@@ -149,7 +149,7 @@ public class CartServiceImpl implements CartService {
         CartSession cart = getCart();
 
         Optional<CartItem> itemOpt = cart.getItems().stream()
-                .filter(i -> i.getProductId().equals(productId))
+                .filter(i -> i.getProductId().equals(productId) && java.util.Objects.equals(i.getComboId(), comboId))
                 .findFirst();
 
         if (itemOpt.isEmpty()) {
@@ -179,13 +179,13 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public void removeItem(UUID productId) {
+    public void removeItem(UUID productId, UUID comboId) {
         if (productId == null) {
             throw new BadRequestException("ID sản phẩm không hợp lệ");
         }
 
         CartSession cart = getCart();
-        boolean removed = cart.getItems().removeIf(i -> i.getProductId().equals(productId));
+        boolean removed = cart.getItems().removeIf(i -> i.getProductId().equals(productId) && java.util.Objects.equals(i.getComboId(), comboId));
 
         if (!removed) {
             throw new BadRequestException("Sản phẩm không tồn tại trong giỏ hàng");
@@ -215,7 +215,7 @@ public class CartServiceImpl implements CartService {
             }
 
             Optional<CartItem> existing = cart.getItems().stream()
-                    .filter(i -> i.getProductId().equals(guestItem.getProductId()))
+                    .filter(i -> i.getProductId().equals(guestItem.getProductId()) && java.util.Objects.equals(i.getComboId(), guestItem.getComboId()))
                     .findFirst();
 
             Integer maxQty = guestItem.getAvailableStock() != null ?

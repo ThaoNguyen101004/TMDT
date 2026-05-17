@@ -24,7 +24,18 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('ALL');
   const navigate = useNavigate();
+
+  const TABS = [
+    { id: 'ALL', label: 'Tất cả' },
+    { id: 'PENDING', label: 'Chờ xử lý' },
+    { id: 'CONFIRMED', label: 'Đã xác nhận' },
+    { id: 'WAITING_FOR_DELIVERY', label: 'Chờ giao hàng' },
+    { id: 'IN_TRANSIT', label: 'Đang giao' },
+    { id: 'DELIVERED', label: 'Đã giao' },
+    { id: 'CANCELLED', label: 'Đã hủy' },
+  ];
 
   useEffect(() => {
     let mounted = true;
@@ -88,9 +99,39 @@ export default function Orders() {
     );
   }
 
+  const filteredOrders = orders.filter(o => activeTab === 'ALL' ? true : o.status === activeTab);
+
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-4">
       <HeaderBar />
+
+      {/* Tabs */}
+      {!loading && !error && (
+        <div className="flex overflow-x-auto gap-2 pb-2 mb-2 scrollbar-hide">
+          {TABS.map(tab => {
+            const count = tab.id === 'ALL' ? orders.length : orders.filter(o => o.status === tab.id).length;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`whitespace-nowrap px-4 py-2 flex items-center gap-2 rounded-full text-sm font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-indigo-600'
+                }`}
+              >
+                {tab.label}
+                <span className={`px-2 py-0.5 rounded-full text-xs ${
+                  activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {loading ? (
         <div className="overflow-hidden border border-indigo-100 rounded-lg shadow-sm bg-white">
           <div className="overflow-x-auto">
@@ -156,8 +197,15 @@ export default function Orders() {
                 </tr>
               </thead>
               <tbody className="text-sm">
-                {orders.map((o) => (
-                  <tr key={o.id} className="border-t border-indigo-50/70 hover:bg-indigo-50/40 transition">
+                {filteredOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-12 text-center text-gray-500 bg-white">
+                      Không có đơn hàng nào ở trạng thái này.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredOrders.map((o) => (
+                    <tr key={o.id} className="border-t border-indigo-50/70 hover:bg-indigo-50/40 transition">
                     <td className="px-4 py-3 font-semibold text-indigo-700">#{shortId(o.id)}</td>
                     <td className="px-4 py-3 text-gray-600">{formatDate(o.createdAt)}</td>
                     <td className="px-4 py-3"><StatusBadge value={o.status} /></td>
@@ -201,7 +249,7 @@ export default function Orders() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

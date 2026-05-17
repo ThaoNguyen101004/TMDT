@@ -48,8 +48,8 @@ const ProductFilterSidebar: React.FC<FilterSidebarProps> = ({
           categoryApi.getAll(),
           brandApi.getAll(),
         ]);
-        setCategories(catRes.content || catRes);
-        setBrands(brandRes.content || brandRes);
+        setCategories((catRes as any).content ?? catRes);
+        setBrands((brandRes as any).content ?? brandRes);
       } catch (error) {
         console.error('Error loading filters:', error);
       }

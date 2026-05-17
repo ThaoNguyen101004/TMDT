@@ -13,8 +13,11 @@ import secure_shop.backend.dto.product.ProductDTO;
 import secure_shop.backend.dto.product.ProductDetailsDTO;
 import secure_shop.backend.dto.product.ProductSummaryDTO;
 import secure_shop.backend.service.ProductService;
+import secure_shop.backend.utils.ExcelHelper;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -75,6 +78,31 @@ public class ProductController {
     public ResponseEntity<Integer> getTotalProductsCount() {
         Integer count = productService.getTotalProductsCount();
         return ResponseEntity.ok(count);
+    }
+
+    @PostMapping("/import")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> importExcelFile(@RequestParam("file") MultipartFile file) {
+        if (ExcelHelper.hasExcelFormat(file)) {
+            try {
+                List<ProductDTO> dtos = productService.importProductsFromExcel(file);
+                return ResponseEntity.ok(dtos);
+            } catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("Could not upload the file: " + file.getOriginalFilename() + "!");
+            }
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Please upload an excel file!");
+    }
+
+    @PatchMapping("/global-sale")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> applyGlobalSale(@RequestParam("percent") int percent, @RequestParam(value = "categoryId", required = false) Long categoryId) {
+        try {
+            productService.applyGlobalDiscount(percent, categoryId);
+            return ResponseEntity.ok("Sale applied successfully!");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
     }
 }
 

@@ -69,10 +69,47 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
                                            String keyword,
                                            Pageable pageable);
 
+    @Query("""
+    SELECT new secure_shop.backend.dto.product.ProductSummaryDTO(
+        p.id, p.sku, p.name, p.listedPrice, p.price, p.thumbnailUrl,
+        COALESCE(i.onHand, 0) - COALESCE(i.reserved, 0),
+        (CASE WHEN COALESCE(i.onHand, 0) - COALESCE(i.reserved, 0) > 0 THEN true ELSE false END),
+        new secure_shop.backend.dto.product.CategorySummaryDTO(c.id, c.name, c.imageUrl, c.description, c.active),
+        new secure_shop.backend.dto.product.BrandDTO(b.id, b.name),
+        p.rating, p.reviewCount
+    )
+    FROM Product p
+    LEFT JOIN p.category c
+    LEFT JOIN p.brand b
+    LEFT JOIN p.inventory i
+    WHERE p.deletedAt IS NULL
+      AND p.id IN :productIds
+      AND (:active IS NULL OR p.active = :active)
+      AND (:categoryId IS NULL OR c.id = :categoryId)
+      AND (:brandId IS NULL OR b.id = :brandId)
+      AND (:minPrice IS NULL OR p.price >= :minPrice)
+      AND (:maxPrice IS NULL OR p.price <= :maxPrice)
+      AND (:inStock IS NULL OR 
+           (:inStock = true AND COALESCE(i.onHand, 0) - COALESCE(i.reserved, 0) > 0) OR 
+           (:inStock = false AND COALESCE(i.onHand, 0) - COALESCE(i.reserved, 0) <= 0))
+    """)
+    Page<ProductSummaryDTO> filterProductsByIds(@Param("active") Boolean active,
+                                                @Param("categoryId") Long categoryId,
+                                                @Param("brandId") Long brandId,
+                                                @Param("minPrice") BigDecimal minPrice,
+                                                @Param("maxPrice") BigDecimal maxPrice,
+                                                @Param("inStock") Boolean inStock,
+                                                @Param("productIds") java.util.List<UUID> productIds,
+                                                Pageable pageable);
+
     // Top 5 products theo số lượng review (xem như 'bán chạy' / phổ biến)
     java.util.List<Product> findTop5ByActiveTrueOrderByReviewCountDesc();
 
     @Query("SELECT COUNT(p) FROM Product p WHERE p.deletedAt IS NULL")
     Integer countProductsNotDeleted();
+
+    Optional<Product> findBySku(String sku);
+
+    java.util.List<Product> findByCategory(secure_shop.backend.entities.Category category);
 }
 

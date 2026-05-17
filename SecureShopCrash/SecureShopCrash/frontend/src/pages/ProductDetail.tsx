@@ -19,7 +19,9 @@ import { toast } from "react-toastify";
 import { cartService } from "../utils/cartService";
 import { useAppSelector } from "../hooks";
 import { productApi, ReviewApi } from "../utils/api";
-import type { ProductDetail, Review } from "../types/types";
+import { api } from "../utils/axiosConfig";
+import { wishlistService } from "../utils/wishlistService";
+import type { ProductDetail, Review, Combo } from "../types/types";
 
 const ProductDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -42,9 +44,10 @@ const ProductDetails: React.FC = () => {
   const fetchProductDetails = async (productId: string) => {
     try {
       setLoading(true);
-      const [response, reviewsData] = await Promise.all([
+      const [response, reviewsData, combosRes] = await Promise.all([
         productApi.getById(productId),
         ReviewApi.getReviewsByProduct(productId),
+        api.get(`/combos/product/${productId}`),
       ]);
 
       const baseProduct = {
@@ -56,101 +59,41 @@ const ProductDetails: React.FC = () => {
       switch (response.category?.id) {
         case 1:
           baseProduct.features = [
-            "Ghi hình độ phân giải cao (2K/4K) với góc quan sát rộng",
-            "Tầm nhìn ban đêm hồng ngoại lên đến 30 mét",
-            "Phát hiện chuyển động AI và gửi cảnh báo tức thì qua điện thoại",
-            "Kết nối WiFi ổn định, hỗ trợ Ethernet (LAN)",
-            "Lưu trữ linh hoạt: thẻ nhớ microSD hoặc Cloud",
-            "Thiết kế chống nước, chống bụi chuẩn IP67",
+            "Son môi mang đến màu sắc tự nhiên cùng chất son mềm mịn, giúp đôi môi trông tươi tắn hơn trong nhiều phong cách trang điểm khác nhau. Công thức bổ sung thành phần dưỡng giúp hạn chế tình trạng khô môi và bong tróc khi sử dụng trong thời gian dài. Thiết kế nhỏ gọn, tiện lợi để mang theo khi đi học, đi làm hoặc du lịch.",
           ];
-          baseProduct.specifications = {
-            "Độ phân giải": "2K / 4K Ultra HD (tuỳ mẫu)",
-            "Góc nhìn": "110° - 130°",
-            "Tầm nhìn ban đêm": "Tối đa 30m (hồng ngoại IR)",
-            "Kết nối": "WiFi 2.4GHz / Ethernet RJ45",
-            "Nguồn cấp": "DC 12V / PoE",
-            "Chống nước": "Chuẩn IP67",
-            "Lưu trữ": "Thẻ nhớ microSD (tối đa 256GB) / Cloud",
-            "Chất liệu": "Hợp kim nhôm, chống rỉ sét",
-          };
           break;
+
 
         case 2:
           baseProduct.features = [
-            "Phát hiện chuyển động, cửa mở hoặc rung chấn bất thường",
-            "Còi hú công suất lớn, âm lượng trên 120dB",
-            "Kết nối không dây giữa các cảm biến với trung tâm báo động",
-            "Hỗ trợ thông báo qua ứng dụng điện thoại",
-            "Dễ dàng mở rộng thêm cảm biến và remote điều khiển",
+            "Kem chống nắng giúp hỗ trợ bảo vệ da trước tác động của tia UV và môi trường bên ngoài, đồng thời hạn chế cảm giác khô ráp do tiếp xúc với ánh nắng. Chất kem mỏng nhẹ, dễ tán đều trên da và không để lại cảm giác nặng mặt khi sử dụng. Sản phẩm phù hợp dùng hằng ngày trước khi ra ngoài hoặc trước các bước trang điểm.",
           ];
-          baseProduct.specifications = {
-            "Loại thiết bị": "Báo động không dây / có dây",
-            "Tần số hoạt động": "433MHz / WiFi 2.4GHz",
-            "Còi hú": "120dB, âm lượng lớn",
-            "Hỗ trợ cảm biến": "Tối đa 100 thiết bị",
-            "Nguồn điện": "Adapter 12V DC hoặc pin sạc",
-            "Phạm vi kết nối": "Tối đa 100 mét (trong nhà)",
-          };
           break;
 
         case 3:
           baseProduct.features = [
-            "Mở khóa bằng vân tay, mã số, thẻ từ hoặc ứng dụng di động",
-            "Cảm biến vân tay quang học độ chính xác cao",
-            "Tự động khóa khi đóng cửa hoặc sau thời gian cài đặt",
-            "Cảnh báo khi nhập sai mã, phá khóa hoặc pin yếu",
-            "Thiết kế hợp kim sang trọng, phù hợp cửa gỗ và cửa thép",
+            "Sản phẩm giúp làm sạch bụi bẩn, dầu thừa và cặn trang điểm trên da sau một ngày dài mà không gây khô căng khó chịu. Kết cấu tạo bọt nhẹ giúp mang lại cảm giác sạch thoáng nhưng vẫn giữ được độ ẩm tự nhiên cho da. Phù hợp sử dụng mỗi ngày cho cả da thường, da hỗn hợp và da nhạy cảm.",
           ];
-          baseProduct.specifications = {
-            "Phương thức mở": "Vân tay / Mã số / Thẻ từ / App điện thoại",
-            "Kết nối": "Bluetooth 5.0 / WiFi (tuỳ mẫu)",
-            "Chất liệu": "Hợp kim nhôm cao cấp, chống gỉ sét",
-            "Nguồn điện": "4-8 viên pin AA",
-            "Tuổi thọ pin": "6–12 tháng tuỳ tần suất sử dụng",
-            "Độ dày cửa phù hợp": "35mm – 100mm",
-          };
           break;
+
 
         case 4:
           baseProduct.features = [
-            "Bộ mở rộng sóng WiFi mạnh mẽ, giảm điểm chết tín hiệu",
-            "Hỗ trợ băng tần kép 2.4GHz và 5GHz tốc độ cao",
-            "Cài đặt nhanh chóng qua trình duyệt hoặc ứng dụng di động",
-            "Tương thích với hầu hết router và thiết bị mạng phổ biến",
-            "Thiết kế nhỏ gọn, tiết kiệm điện năng",
+            "Tinh chất chứa các thành phần hỗ trợ cải thiện làn da xỉn màu, giúp da trông tươi sáng và rạng rỡ hơn sau thời gian sử dụng. Công thức dịu nhẹ, dễ thẩm thấu, không gây bết dính và có thể kết hợp trong nhiều chu trình skincare khác nhau. Phù hợp với những ai muốn chăm sóc da theo hướng căng bóng và khỏe mạnh tự nhiên.",
           ];
-          baseProduct.specifications = {
-            "Chuẩn WiFi": "IEEE 802.11ac/b/g/n",
-            "Băng tần": "2.4GHz & 5GHz",
-            "Tốc độ truyền": "Lên đến 1200Mbps",
-            "Cổng LAN": "1x RJ45 10/100Mbps",
-            "Nguồn cấp": "AC 110–240V",
-            "Vùng phủ sóng": "Tối đa 100–150m²",
-          };
           break;
+
 
         case 5:
           baseProduct.features = [
-            "Phụ kiện chính hãng, tương thích với nhiều thiết bị an ninh",
-            "Cung cấp nguồn ổn định, giúp thiết bị hoạt động bền bỉ",
-            "Chống quá tải, chống cháy nổ, an toàn tuyệt đối",
-            "Thiết kế nhỏ gọn, dễ dàng lắp đặt và thay thế",
+            "Sản phẩm giúp cấp ẩm chuyên sâu, hỗ trợ làm dịu và phục hồi làn da khô ráp do tác động từ môi trường và thời tiết. Với kết cấu mỏng nhẹ, kem dễ dàng thẩm thấu vào da mà không gây cảm giác nhờn rít. Phù hợp sử dụng hằng ngày cho nhiều loại da, đặc biệt là da thiếu ẩm hoặc thường xuyên tiếp xúc với điều hòa và ánh nắng."
           ];
-          baseProduct.specifications = {
-            "Nguồn điện vào": "AC 100–240V / 50–60Hz",
-            "Nguồn điện ra": "DC 12V – 2A",
-            "Chiều dài dây": "1.2 mét",
-            "Chất liệu": "Nhựa ABS chống cháy",
-            "Trọng lượng": "Khoảng 150g",
-            "Phù hợp với": "Camera, đầu ghi, router, bộ báo động",
-          };
           break;
+
 
         default:
           baseProduct.features = [
-            "Sản phẩm chất lượng cao, dễ dàng sử dụng",
-            "Thiết kế hiện đại, phù hợp mọi không gian",
-            "Đáp ứng tiêu chuẩn an ninh quốc tế",
+            "Son môi mang đến màu sắc tự nhiên cùng chất son mềm mịn, giúp đôi môi trông tươi tắn hơn trong nhiều phong cách trang điểm khác nhau. Công thức bổ sung thành phần dưỡng giúp hạn chế tình trạng khô môi và bong tróc khi sử dụng trong thời gian dài. Thiết kế nhỏ gọn, tiện lợi để mang theo khi đi học, đi làm hoặc du lịch.",
           ];
           baseProduct.specifications = {
             "Bảo hành": "12 tháng chính hãng",
@@ -162,6 +105,7 @@ const ProductDetails: React.FC = () => {
 
       setProduct(baseProduct);
       setReviews(reviewsData || []);
+      setIsWishlisted(wishlistService.isInWishlist(productId));
     } finally {
       setLoading(false);
     }
@@ -197,11 +141,15 @@ const ProductDetails: React.FC = () => {
 
   const handleAddToCart = async () => {
     if (!product) return;
-    const success = await cartService.addToCart(product, quantity);
-    if (success) {
-      window.dispatchEvent(new Event("cartUpdated"));
-    }
+    
+    window.dispatchEvent(
+      new CustomEvent('requestAddToCart', {
+        detail: { product, quantity }
+      })
+    );
   };
+
+
 
   const handleBuyNow = async () => {
     if (userRole === "guest") {
@@ -216,12 +164,9 @@ const ProductDetails: React.FC = () => {
   };
 
   const handleWishlist = () => {
-    setIsWishlisted(!isWishlisted);
-    toast.success(
-      isWishlisted
-        ? "Đã xóa khỏi danh sách yêu thích"
-        : "Đã thêm vào danh sách yêu thích"
-    );
+    if (!product) return;
+    const added = wishlistService.toggle(product);
+    setIsWishlisted(added);
   };
 
   // Filter reviews by rating
@@ -348,11 +293,10 @@ const ProductDetails: React.FC = () => {
                   <button
                     key={index}
                     onClick={() => setSelectedImage(index)}
-                    className={`w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                      selectedImage === index
-                        ? "border-purple-600"
-                        : "border-gray-200"
-                    }`}
+                    className={`w-20 h-20 rounded-lg overflow-hidden border-2 ${selectedImage === index
+                      ? "border-purple-600"
+                      : "border-gray-200"
+                      }`}
                   >
                     <img
                       src={image?.url || product.thumbnailUrl}
@@ -401,11 +345,10 @@ const ProductDetails: React.FC = () => {
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className={`h-5 w-5 ${
-                        i < Math.floor(product.rating)
-                          ? "text-yellow-400 fill-current"
-                          : "text-gray-300"
-                      }`}
+                      className={`h-5 w-5 ${i < Math.floor(product.rating)
+                        ? "text-yellow-400 fill-current"
+                        : "text-gray-300"
+                        }`}
                     />
                   ))}
                 </div>
@@ -429,7 +372,7 @@ const ProductDetails: React.FC = () => {
                     {Math.round(
                       ((product.listedPrice - product.price) /
                         product.listedPrice) *
-                        100
+                      100
                     )}
                     %
                   </span>
@@ -439,9 +382,8 @@ const ProductDetails: React.FC = () => {
 
             <div className="flex items-center space-x-4">
               <span
-                className={`flex items-center ${
-                  product.inStock ? "text-green-600" : "text-red-600"
-                }`}
+                className={`flex items-center ${product.inStock ? "text-green-600" : "text-red-600"
+                  }`}
               >
                 {product.inStock ? (
                   <CheckCircle className="h-5 w-5 mr-2" />
@@ -508,11 +450,10 @@ const ProductDetails: React.FC = () => {
               {/* Wishlist luôn hoạt động */}
               <button
                 onClick={handleWishlist}
-                className={`p-3 rounded-lg border ${
-                  isWishlisted
-                    ? "bg-pink-50 border-pink-200 text-pink-600"
-                    : "bg-white border-gray-300 text-gray-600 hover:bg-gray-50"
-                }`}
+                className={`p-3 rounded-lg border ${isWishlisted
+                  ? "bg-pink-50 border-pink-200 text-pink-600"
+                  : "bg-white border-gray-300 text-gray-600 hover:bg-gray-50"
+                  }`}
               >
                 <Heart
                   className={`h-5 w-5 ${isWishlisted ? "fill-current" : ""}`}
@@ -523,7 +464,7 @@ const ProductDetails: React.FC = () => {
             {/* Features */}
             <div className="border-t pt-6">
               <h3 className="text-lg font-semibold text-zinc-800 mb-4">
-                Tính năng nổi bật
+                Mô tả sản phẩm
               </h3>
               <ul className="space-y-2">
                 {product.features.map((feature, index) => (
@@ -553,28 +494,7 @@ const ProductDetails: React.FC = () => {
           </motion.div>
         </div>
 
-        {/* Product Specifications */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="bg-gray-50 rounded-lg p-6 mb-12"
-        >
-          <h2 className="text-2xl font-bold text-zinc-800 mb-6">
-            Thông số kỹ thuật
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(product.specifications).map(([key, value]) => (
-              <div
-                key={key}
-                className="flex justify-between py-2 border-b border-gray-200"
-              >
-                <span className="font-medium text-gray-900">{key}</span>
-                <span className="text-gray-700">{value}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+
 
         {/* Reviews Section */}
         <motion.div
@@ -593,11 +513,10 @@ const ProductDetails: React.FC = () => {
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className={`h-5 w-5 ${
-                        i < Math.floor(product.rating)
-                          ? "text-yellow-400 fill-current"
-                          : "text-gray-300"
-                      }`}
+                      className={`h-5 w-5 ${i < Math.floor(product.rating)
+                        ? "text-yellow-400 fill-current"
+                        : "text-gray-300"
+                        }`}
                     />
                   ))}
                 </div>
@@ -613,11 +532,10 @@ const ProductDetails: React.FC = () => {
             <span className="text-sm font-medium text-gray-700">Lọc theo:</span>
             <button
               onClick={() => setFilterRating(null)}
-              className={`px-3 py-1 rounded-full text-sm ${
-                filterRating === null
-                  ? "bg-purple-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+              className={`px-3 py-1 rounded-full text-sm ${filterRating === null
+                ? "bg-purple-600 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
             >
               Tất cả
             </button>
@@ -625,11 +543,10 @@ const ProductDetails: React.FC = () => {
               <button
                 key={rating}
                 onClick={() => setFilterRating(rating)}
-                className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${
-                  filterRating === rating
-                    ? "bg-purple-600 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
+                className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${filterRating === rating
+                  ? "bg-purple-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
               >
                 {rating} <Star className="h-3 w-3 fill-current" />
               </button>
@@ -667,11 +584,10 @@ const ProductDetails: React.FC = () => {
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`h-4 w-4 ${
-                                i < review.rating
-                                  ? "text-yellow-400 fill-current"
-                                  : "text-gray-300"
-                              }`}
+                              className={`h-4 w-4 ${i < review.rating
+                                ? "text-yellow-400 fill-current"
+                                : "text-gray-300"
+                                }`}
                             />
                           ))}
                           <span className="text-sm text-gray-500 ml-2">
@@ -693,6 +609,8 @@ const ProductDetails: React.FC = () => {
         </motion.div>
       </main>
       <Footer />
+
+
     </div>
   );
 };

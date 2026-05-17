@@ -13,7 +13,7 @@ public class CartSession implements Serializable {
 
     public void addItem(CartItem item) {
         Optional<CartItem> existing = items.stream()
-                .filter(i -> i.getProductId().equals(item.getProductId()))
+                .filter(i -> i.getProductId().equals(item.getProductId()) && Objects.equals(i.getComboId(), item.getComboId()))
                 .findFirst();
 
         if (existing.isPresent()) {
@@ -24,13 +24,13 @@ public class CartSession implements Serializable {
         }
     }
 
-    public void removeItem(UUID productId) {
-        items.removeIf(i -> i.getProductId().equals(productId));
+    public void removeItem(UUID productId, UUID comboId) {
+        items.removeIf(i -> i.getProductId().equals(productId) && Objects.equals(i.getComboId(), comboId));
     }
 
-    public void updateQuantity(UUID productId, int quantity) {
+    public void updateQuantity(UUID productId, UUID comboId, int quantity) {
         items.stream()
-                .filter(i -> i.getProductId().equals(productId))
+                .filter(i -> i.getProductId().equals(productId) && Objects.equals(i.getComboId(), comboId))
                 .findFirst()
                 .ifPresent(i -> i.setQuantity(quantity));
     }

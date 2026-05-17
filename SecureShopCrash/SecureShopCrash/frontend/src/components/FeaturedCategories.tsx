@@ -19,6 +19,8 @@ import {
   Flower,
   Star,
   Moon,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 const CATEGORY_ICONS: Record<number, React.ReactNode> = {
@@ -40,16 +42,19 @@ const CATEGORY_ICONS: Record<number, React.ReactNode> = {
   16: <Moon className="w-10 h-10" />,
 };
 
+const PAGE_SIZE = 10;
+
 const FeaturedCategories: React.FC = () => {
   const [categories, setCategories] = useState<CategorySummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const res = await categoryApi.getAll();
-        const cats = res.content || res;
-        setCategories(cats.slice(0, 21));
+        const cats = (res as any).content ?? res;
+        setCategories(cats);
       } catch (error) {
         console.error('Error fetching categories:', error);
       } finally {
@@ -59,6 +64,12 @@ const FeaturedCategories: React.FC = () => {
 
     fetchCategories();
   }, []);
+
+  const totalPages = Math.ceil(categories.length / PAGE_SIZE);
+  const visibleCategories = categories.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+
+  const handlePrev = () => setPage((p) => Math.max(0, p - 1));
+  const handleNext = () => setPage((p) => Math.min(totalPages - 1, p + 1));
 
   if (loading) {
     return (
@@ -74,33 +85,85 @@ const FeaturedCategories: React.FC = () => {
     <section className="py-12 bg-white w-full">
       <div className="w-full px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2 uppercase tracking-wider">
+        <div className="mb-10 flex items-center justify-between">
+          <h2 className="text-3xl font-bold text-gray-900 uppercase tracking-wider">
             Danh Mục Nổi Bật
           </h2>
+
+          {/* Arrows + page dots */}
+          {totalPages > 1 && (
+            <div className="flex items-center gap-3">
+              {/* Dot indicators */}
+              <div className="flex items-center gap-1.5">
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setPage(i)}
+                    className={`rounded-full transition-all duration-200 ${
+                      i === page
+                        ? 'w-4 h-4 bg-pink-500'
+                        : 'w-2.5 h-2.5 bg-pink-200 hover:bg-pink-300'
+                    }`}
+                    aria-label={`Trang ${i + 1}`}
+                  />
+                ))}
+              </div>
+
+              {/* Prev button */}
+              <button
+                onClick={handlePrev}
+                disabled={page === 0}
+                className={`w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                  page === 0
+                    ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+                    : 'border-pink-400 text-pink-500 hover:bg-pink-50 hover:border-pink-500 hover:scale-105'
+                }`}
+                aria-label="Trang trước"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+
+              {/* Next button */}
+              <button
+                onClick={handleNext}
+                disabled={page === totalPages - 1}
+                className={`w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                  page === totalPages - 1
+                    ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+                    : 'border-pink-400 text-pink-500 hover:bg-pink-50 hover:border-pink-500 hover:scale-105'
+                }`}
+                aria-label="Trang sau"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Categories Circle Grid */}
-        <div className="flex flex-wrap justify-start gap-6 lg:gap-8">
-          {categories.map((category, index) => (
-            <Link
-              key={category.id}
-              to={`/products?category=${category.id}`}
-              className="group flex flex-col items-center"
-            >
-              {/* Circle with Pink Border */}
-              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-pink-300 hover:border-pink-400 bg-white flex items-center justify-center transition-all hover:scale-110 hover:shadow-lg">
-                <div className="text-pink-400 group-hover:text-pink-500 transition-colors">
-                  {CATEGORY_ICONS[index + 1] || <Sparkles className="w-10 h-10" />}
+        {/* Categories Circle Row */}
+        <div className="flex flex-nowrap justify-between gap-4">
+          {visibleCategories.map((category, index) => {
+            const globalIndex = page * PAGE_SIZE + index + 1;
+            return (
+              <Link
+                key={category.id}
+                to={`/products?category=${category.id}`}
+                className="group flex flex-col items-center flex-1 min-w-0"
+              >
+                {/* Circle with Pink Border */}
+                <div className="w-20 h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full border-4 border-pink-300 hover:border-pink-500 bg-white flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg">
+                  <div className="text-pink-400 group-hover:text-pink-600 transition-colors">
+                    {CATEGORY_ICONS[globalIndex] || <Sparkles className="w-10 h-10" />}
+                  </div>
                 </div>
-              </div>
-              
-              {/* Label */}
-              <p className="mt-3 text-center text-gray-700 font-semibold text-sm md:text-base line-clamp-2 hover:text-pink-500 transition-colors w-24 md:w-28">
-                {category.name}
-              </p>
-            </Link>
-          ))}
+
+                {/* Label */}
+                <p className="mt-3 text-center text-gray-700 font-semibold text-xs md:text-sm line-clamp-2 group-hover:text-pink-500 transition-colors w-full px-1">
+                  {category.name}
+                </p>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>

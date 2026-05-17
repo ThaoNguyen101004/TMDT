@@ -111,6 +111,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/inventories/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/inventories/**").hasRole("ADMIN")
 
+                        // File upload / serving
+                        .requestMatchers(HttpMethod.GET, "/api/files/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/files/upload").authenticated()
+
                         // === Media Asset endpoints ===
                         .requestMatchers(HttpMethod.GET, "/api/media/product/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/media").hasRole("ADMIN")
@@ -125,6 +129,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/products/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/products/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMIN")
+
+                        // Combo endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/combos", "/api/combos/product/**", "/api/combos/{id}").permitAll()
+                        .requestMatchers("/api/combos/**").hasRole("ADMIN")
 
                         // Order endpoints
                         .requestMatchers("/api/orders/my-orders", "/api/orders/cancel/**").authenticated()
@@ -191,8 +199,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/cart/**").authenticated()
 
                         // Chatbot
-                        .requestMatchers("/api/chat/ask").permitAll()
+                        .requestMatchers("/api/chat/ask", "/api/chat/stream").permitAll()
                         .requestMatchers("/api/chat/ingest").hasRole("ADMIN")
+                        .requestMatchers("/api/chat/ingestAll").permitAll()
 
                         // Default: require authentication for everything else
                         .anyRequest().authenticated()

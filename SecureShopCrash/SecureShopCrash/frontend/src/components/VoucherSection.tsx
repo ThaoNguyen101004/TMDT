@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Copy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useUIConfig } from '../stores/uiConfigStore';
 
 interface Voucher {
   id: string;
@@ -56,7 +57,16 @@ const VOUCHERS: Voucher[] = [
   },
 ];
 
+const GRID_CLASS: Record<number, string> = {
+  2: 'grid-cols-1 md:grid-cols-2',
+  3: 'grid-cols-1 md:grid-cols-3',
+  4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4',
+};
+
 const VoucherSection: React.FC = () => {
+  const { config } = useUIConfig();
+  const visibleCount = config.voucher.visibleCount;
+
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const handleCopyCode = (code: string) => {
@@ -75,22 +85,19 @@ const VoucherSection: React.FC = () => {
     setCurrentIndex((prev) => (prev + 1) % VOUCHERS.length);
   };
 
-  // Show 4 vouchers at a time
-  const visibleVouchers = [
-    VOUCHERS[currentIndex],
-    VOUCHERS[(currentIndex + 1) % VOUCHERS.length],
-    VOUCHERS[(currentIndex + 2) % VOUCHERS.length],
-    VOUCHERS[(currentIndex + 3) % VOUCHERS.length],
-  ];
+  // Show visibleCount vouchers at a time
+  const visibleVouchers = Array.from({ length: visibleCount }, (_, i) =>
+    VOUCHERS[(currentIndex + i) % VOUCHERS.length]
+  );
+
+  const gridClass = GRID_CLASS[visibleCount] ?? GRID_CLASS[4];
 
   return (
     <section className="py-16 bg-gray-50">
       <div className="w-full px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 mb-3">
-            Mã Giảm Giá Đặc Biệt
-          </h2>
+          <h2 className="text-4xl font-bold text-gray-900 mb-3">Mã Giảm Giá Đặc Biệt</h2>
           <p className="text-gray-600 text-lg">
             Nhập mã giảm giá để tiết kiệm khi mua sắm tại Lumière Beauty
           </p>
@@ -107,19 +114,19 @@ const VoucherSection: React.FC = () => {
             <ChevronLeft className="w-5 h-5 text-gray-700" />
           </button>
 
-          {/* Vouchers Grid - 4 Columns */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Vouchers Grid */}
+          <div className={`grid ${gridClass} gap-4`}>
             <AnimatePresence mode="wait">
               {visibleVouchers.map((voucher, index) => (
                 <motion.div
-                  key={voucher.id}
+                  key={`${voucher.id}-${currentIndex}-${index}`}
                   initial={{ opacity: 0, x: 50 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -50 }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                   className="group"
                 >
-                  {/* Voucher Card - White with Dashed Border */}
+                  {/* Voucher Card */}
                   <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 border-2 border-dashed border-gray-300">
                     <div className="p-4 flex flex-col">
                       {/* Top Section - Yellow Badge */}

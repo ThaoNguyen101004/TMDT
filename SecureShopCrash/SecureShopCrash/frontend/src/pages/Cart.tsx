@@ -39,9 +39,12 @@ const Cart: React.FC = () => {
     setLoading(false);
   };
 
+  // Unique identifier for cart items: productId + comboId
+  const getItemId = (item: CartItem) => `${item.productId}-${item.comboId || 'none'}`;
+
   // Toggle select single item
-  const toggleSelectItem = (id: string) => {
-    const item = cartItems.find(i => i.productId === id);
+  const toggleSelectItem = (item: CartItem) => {
+    const id = getItemId(item);
     if (!item?.inStock) {
       toast.warning('Sản phẩm tạm hết hàng, không thể chọn');
       return;
@@ -67,28 +70,29 @@ const Cart: React.FC = () => {
       setSelectedItems(new Set());
     } else {
       // Select all available items
-      setSelectedItems(new Set(availableItems.map(item => item.productId)));
+      setSelectedItems(new Set(availableItems.map(item => getItemId(item))));
     }
   };
 
-  const updateQuantity = async (id: string, newQuantity: number) => {
+  const updateQuantity = async (itemToUpdate: CartItem, newQuantity: number) => {
     if (newQuantity < 1) return;
     
-    const success = await cartService.updateQuantity(id, newQuantity);
+    const success = await cartService.updateQuantity(itemToUpdate.productId, newQuantity, itemToUpdate.comboId);
     if (success) {
       setCartItems(items =>
         items.map(item =>
-          item.productId === id ? { ...item, quantity: newQuantity } : item
+          getItemId(item) === getItemId(itemToUpdate) ? { ...item, quantity: newQuantity } : item
         )
       );
       window.dispatchEvent(new Event('cartUpdated'));
     }
   };
 
-  const removeItem = async (id: string) => {
-    const success = await cartService.removeItem(id);
+  const removeItem = async (itemToRemove: CartItem) => {
+    const success = await cartService.removeItem(itemToRemove.productId, itemToRemove.comboId);
+    const id = getItemId(itemToRemove);
     if (success) {
-      setCartItems(items => items.filter(item => item.productId !== id));
+      setCartItems(items => items.filter(item => getItemId(item) !== id));
       setSelectedItems(prev => {
         const newSet = new Set(prev);
         newSet.delete(id);
@@ -123,10 +127,11 @@ const Cart: React.FC = () => {
   const handleConfirmDelete = async () => {
     setConfirmOpen(false);
     try {
-      for (const id of Array.from(selectedItems)) {
-        await cartService.removeItem(id);
+      const itemsToDelete = cartItems.filter(i => selectedItems.has(getItemId(i)));
+      for (const item of itemsToDelete) {
+        await cartService.removeItem(item.productId, item.comboId);
       }
-      setCartItems((items) => items.filter((i) => !selectedItems.has(i.productId)));
+      setCartItems((items) => items.filter((i) => !selectedItems.has(getItemId(i))));
       setSelectedItems(new Set());
       window.dispatchEvent(new Event('cartUpdated'));
       toast.success('Đã xóa các sản phẩm đã chọn');
@@ -138,7 +143,7 @@ const Cart: React.FC = () => {
   // Calculate total for selected items only
   const calculateSelectedSubtotal = () => {
     return cartItems
-      .filter(item => selectedItems.has(item.productId))
+      .filter(item => selectedItems.has(getItemId(item)))
       .reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
@@ -162,7 +167,7 @@ const Cart: React.FC = () => {
       return;
     }
 
-    const selectedProducts = cartItems.filter(item => selectedItems.has(item.productId));
+    const selectedProducts = cartItems.filter(item => selectedItems.has(getItemId(item)));
 
     const outOfStock = selectedProducts.filter(item => !item.inStock);
     if (outOfStock.length > 0) {
@@ -295,7 +300,7 @@ const Cart: React.FC = () => {
               {/* Cart Items List */}
               {cartItems.map((item, index) => (
                 <motion.div
-                  key={item.productId}
+                  key={getItemId(item)}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: index * 0.1 }}
@@ -308,8 +313,8 @@ const Cart: React.FC = () => {
                     <div className="flex items-start pt-1">
                       <input
                         type="checkbox"
-                        checked={selectedItems.has(item.productId)}
-                        onChange={() => toggleSelectItem(item.productId)}
+                        checked={selectedItems.has(getItemId(item))}
+                        onChange={() => toggleSelectItem(item)}
                         disabled={!item.inStock}
                         className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
@@ -327,10 +332,15 @@ const Cart: React.FC = () => {
                     {/* Product Info */}
                     <div className="flex-1">
                       <Link 
-                        to={`/products/${item.productId}`} 
+                        to={item.comboId ? `/combo-deals` : `/products/${item.productId}`} 
                         className="text-lg font-semibold text-zinc-800 mb-2 hover:text-purple-600 transition-colors block"
                       >
                         {item.name}
+                        {item.comboId && (
+                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800">
+                            Combo Deal
+                          </span>
+                        )}
                       </Link>
                       <p className="text-purple-600 font-bold text-xl mb-3">
                         {formatPrice(item.price)}
@@ -357,16 +367,34 @@ const Cart: React.FC = () => {
                       <div className="flex items-center gap-4">
                         <div className="flex items-center border border-gray-300 rounded-lg">
                           <button
-                            onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                            onClick={() => updateQuantity(item, item.quantity - 1)}
                             className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled={item.quantity <= 1}
                           >
                             <Minus className="w-4 h-4 text-gray-600" />
                           </button>
 
-                          <span className="px-4 py-2 font-semibold text-zinc-800 min-w-[3rem] text-center">
-                            {item.quantity}
-                          </span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={item.availableStock ?? 9999}
+                            value={item.quantity}
+                            onChange={e => {
+                              const val = parseInt(e.target.value);
+                              if (isNaN(val) || val < 1) return;
+                              if (item.availableStock && val > item.availableStock) {
+                                toast.info(`Chỉ còn ${item.availableStock} sản phẩm trong kho.`);
+                                updateQuantity(item, item.availableStock);
+                                return;
+                              }
+                              updateQuantity(item, val);
+                            }}
+                            onBlur={e => {
+                              const val = parseInt(e.target.value);
+                              if (isNaN(val) || val < 1) updateQuantity(item, 1);
+                            }}
+                            className="w-14 text-center py-2 font-semibold text-zinc-800 border-0 focus:ring-0 focus:outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
 
                           <button
                             onClick={() => {
@@ -374,7 +402,7 @@ const Cart: React.FC = () => {
                                 toast.info(`Chỉ còn ${item.availableStock} sản phẩm trong kho.`);
                                 return;
                               }
-                              updateQuantity(item.productId, item.quantity + 1);
+                              updateQuantity(item, item.quantity + 1);
                             }}
                             className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled={!!item.availableStock && item.quantity >= item.availableStock}
@@ -384,7 +412,7 @@ const Cart: React.FC = () => {
                         </div>
 
                         <button
-                          onClick={() => removeItem(item.productId)}
+                          onClick={() => removeItem(item)}
                           className="text-red-500 hover:text-red-700 transition-colors p-2"
                           title="Xóa sản phẩm"
                         >

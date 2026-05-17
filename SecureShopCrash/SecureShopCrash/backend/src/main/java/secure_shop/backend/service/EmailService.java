@@ -8,4 +8,5 @@ public interface EmailService {
     void sendResetPasswordEmail(String to, String resetLink) throws MessagingException, IOException;
     void sendVerificationEmail(String to, String verificationLink) throws MessagingException, IOException;
     void sendOrderConfirmationEmail(Order order) throws MessagingException, IOException;
+    void sendOtpEmail(String to, String otp) throws MessagingException, IOException;
 }

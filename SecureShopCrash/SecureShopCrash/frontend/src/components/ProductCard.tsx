@@ -1,22 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Eye, Star, Loader2, Zap, Package, Heart } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import type { ProductSummary } from '../types/types';
+import { wishlistService } from '../utils/wishlistService';
 
 interface ProductCardProps {
   product: ProductSummary;
-  onAddToCart?: (product: ProductSummary) => Promise<void> | void;
 }
 
 // Helper function to determine product tags
 const getProductTags = (product: ProductSummary): Array<{label: string; type: 'new' | 'sale' | 'hot' | 'freeship'}> => {
-  const tags = [];
-  const createdAt = new Date(product.createdAt || '');
-  const daysAgo = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-  
-  if (daysAgo <= 7) tags.push({ label: 'Mới', type: 'new' });
+  const tags: Array<{label: string; type: 'new' | 'sale' | 'hot' | 'freeship'}> = [];
   
   if (product.price < (product.listedPrice || product.price)) {
     const discount = Math.round(((product.listedPrice! - product.price) / product.listedPrice!) * 100);
@@ -27,13 +23,21 @@ const getProductTags = (product: ProductSummary): Array<{label: string; type: 'n
     tags.push({ label: 'Hot', type: 'hot' });
   }
   
-  if (Math.random() > 0.6) tags.push({ label: 'Freeship', type: 'freeship' });
-  
   return tags.slice(0, 2);
 };
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [isAdding, setIsAdding] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(() =>
+    wishlistService.isInWishlist(product.id)
+  );
+
+  useEffect(() => {
+    const sync = () => setIsWishlisted(wishlistService.isInWishlist(product.id));
+    sync();
+    window.addEventListener('wishlistUpdated', sync);
+    return () => window.removeEventListener('wishlistUpdated', sync);
+  }, [product.id]);
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat('vi-VN', {
@@ -52,17 +56,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
       return;
     }
 
-    if (!onAddToCart) {
-      toast.error('Không thể thêm sản phẩm — chưa có handler.');
-      return;
-    }
-
     try {
       setIsAdding(true);
-      await onAddToCart(product);
-      window.dispatchEvent(new Event('cartUpdated'));
+      window.dispatchEvent(
+        new CustomEvent('requestAddToCart', {
+          detail: { product, quantity: 1 }
+        })
+      );
     } finally {
-      setIsAdding(false);
+      // Simulate slight delay so spinner is visible momentarily
+      setTimeout(() => setIsAdding(false), 300);
     }
   };
 
@@ -119,10 +122,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
         {/* Action buttons */}
         <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
-            className="bg-white p-2 rounded-full shadow-md hover:bg-gray-50 transition-colors"
-            title="Yêu thích"
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const added = wishlistService.toggle(product);
+              setIsWishlisted(added);
+            }}
+            className={`bg-white p-2 rounded-full shadow-md hover:bg-gray-50 transition-colors ${
+              isWishlisted ? 'ring-2 ring-red-300' : ''
+            }`}
+            title={isWishlisted ? 'Bỏ yêu thích' : 'Yêu thích'}
           >
-            <Heart className="h-4 w-4 text-red-500" />
+            <Heart
+              className={`h-4 w-4 text-red-500 ${isWishlisted ? 'fill-red-500' : ''}`}
+            />
           </button>
           <Link
             to={`/products/${product.id}`}

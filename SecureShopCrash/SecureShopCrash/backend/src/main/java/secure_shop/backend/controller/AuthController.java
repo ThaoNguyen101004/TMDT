@@ -25,7 +25,10 @@ import secure_shop.backend.service.UserService;
 import org.springframework.http.HttpStatus; // Thêm 
 import jakarta.validation.Valid; // Thêm 
 import secure_shop.backend.dto.auth.RegisterRequest; // Thêm 
+import secure_shop.backend.dto.auth.OtpVerifyRequest;
 import secure_shop.backend.service.VerificationService;
+import secure_shop.backend.service.OtpService;
+import secure_shop.backend.service.EmailService;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -44,6 +47,8 @@ public class AuthController {
     private final UserService userService;
     private final PasswordResetService resetService;
     private final VerificationService verificationService;
+    private final OtpService otpService;
+    private final EmailService emailService;
 
     /**
      * Xác thực email
@@ -73,9 +78,19 @@ public class AuthController {
         String email = request.get("email");
         
         try {
-            verificationService.resendVerificationEmail(email);
+            User user = userService.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Email không tồn tại"));
+                
+            if (user.getEnabled()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Tài khoản đã được kích hoạt"));
+            }
+            
+            String tempToken = otpService.generateOtp(user.getId(), email);
+            String otp = otpService.getOtp(tempToken);
+            emailService.sendOtpEmail(email, otp);
+            
             return ResponseEntity.ok(Map.of(
-                "message", "Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư."
+                "message", "Mã OTP xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư."
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -118,7 +133,32 @@ public class AuthController {
             throw new ForbiddenException("Tài khoản đã bị xoá");
         }
 
+
+
         // Sinh token
+        return generateTokensAndCookie(user, request, response);
+    }
+
+    @PostMapping("/verify-registration")
+    public ResponseEntity<Map<String, String>> verifyRegistrationOtp(@Valid @RequestBody OtpVerifyRequest req) {
+        // req.getTempToken() ở đây sẽ chứa email
+        String email = req.getTempToken();
+        String otp = req.getOtp();
+
+        UUID userId = otpService.verifyOtpAndGetUserId(email, otp);
+        if (userId == null) {
+            throw new UnauthorizedException("Mã OTP không hợp lệ hoặc đã hết hạn");
+        }
+
+        User user = userService.findById(userId)
+                .orElseThrow(() -> new UnauthorizedException("Không tìm thấy người dùng"));
+        
+        userService.enableUser(user.getId());
+
+        return ResponseEntity.ok(Map.of("message", "Xác thực tài khoản thành công!"));
+    }
+
+    private ResponseEntity<AuthResponse> generateTokensAndCookie(User user, HttpServletRequest request, HttpServletResponse response) {
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 

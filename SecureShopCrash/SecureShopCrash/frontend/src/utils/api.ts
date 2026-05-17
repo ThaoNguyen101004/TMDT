@@ -113,6 +113,24 @@ export const productApi = {
   countProducts: async () => {
     const response = await api.get<number>("/products/count");
     return response.data;
+  },
+  importExcel: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post("/products/import", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
+  applyGlobalSale: async (percent: number, categoryId?: string) => {
+    const params = new URLSearchParams();
+    params.append("percent", percent.toString());
+    if (categoryId) params.append("categoryId", categoryId);
+    
+    const response = await api.patch(`/products/global-sale?${params.toString()}`);
+    return response.data;
   }
 };
 
@@ -136,6 +154,10 @@ export const orderApi = {
   // User: Tạo đơn hàng mới
   create: async (data: any) => {
     const response = await api.post("/orders", data);
+    return response.data;
+  },
+  getBankTransferQr: async (orderId: string) => {
+    const response = await api.get(`/orders/${orderId}/bank-transfer-qr`);
     return response.data;
   },
   // Admin: Lấy tất cả đơn hàng
@@ -228,46 +250,17 @@ export const userApi = {
   },
 };
 
-// VNPay API
-export { vnpayApi } from "./vnpayService";
 
-// Article API
-export const ArticleApi = {
-  // PUBLIC: Lấy danh sách articles
-  getAll: async (params?: {
-    page?: number;
-    size?: number;
-    active?: boolean;
-  }) => {
-    const response = await publicApi.get("/articles", { params });
-    return response.data;
-  },
-  // PUBLIC: Lấy article theo slug
-  getArticle: async (slug: string) => {
-    const response = await publicApi.get(`/articles/${slug}`);
-    return response.data;
-  },
-  // AUTH: Tạo article mới (Admin)
-  create: async (data: any) => {
-    const response = await api.post("/articles", data);
-    return response.data;
-  },
-  // AUTH: Cập nhật article (Admin)
-  update: async (id: string, data: any) => {
-    const response = await api.put(`/articles/${id}`, data);
-    return response.data;
-  },
-  // AUTH: Xóa article (Admin)
-  delete: async (id: string) => {
-    const response = await api.delete(`/articles/${id}`);
-    return response.data;
-  },
-};
 
 // Discount API - TẤT CẢ REQUIRE AUTH (Admin)
 export const DiscountApi = {
   getAll: async () => {
     const response = await api.get("/discounts");
+    return response.data;
+  },
+  // PUBLIC: Lấy mã đang active (không cần auth)
+  getActive: async () => {
+    const response = await publicApi.get("/discounts/active");
     return response.data;
   },
   findByCode: async (code: string) => {
@@ -539,5 +532,54 @@ export const analyticsApi = {
   getAnalyticsData: async (params?: { startDate?: string; endDate?: string }) => {
     const response = await api.get("/analytics/summary", { params });
     return response.data;
+  },
+};
+
+// Article API
+export const ArticleApi = {
+  // PUBLIC: Lấy danh sách bài viết (có hỗ trợ filter active)
+  getAll: async (params?: { page?: number; size?: number; active?: boolean }) => {
+    const response = await publicApi.get("/articles", { params });
+    return response.data;
+  },
+
+  // PUBLIC: Lấy bài viết theo slug
+  getBySlug: async (slug: string) => {
+    const response = await publicApi.get(`/articles/${slug}`);
+    return response.data;
+  },
+
+  // AUTH - Admin: Tạo bài viết mới
+  create: async (data: {
+    title: string;
+    summary?: string;
+    content: string;
+    externalUrl?: string;
+    imageUrl?: string;
+    active?: boolean;
+  }) => {
+    const response = await api.post("/articles", data);
+    return response.data;
+  },
+
+  // AUTH - Admin: Cập nhật bài viết
+  update: async (
+    id: string,
+    data: {
+      title: string;
+      summary?: string;
+      content: string;
+      externalUrl?: string;
+      imageUrl?: string;
+      active?: boolean;
+    }
+  ) => {
+    const response = await api.put(`/articles/${id}`, data);
+    return response.data;
+  },
+
+  // AUTH - Admin: Xóa bài viết
+  delete: async (id: string) => {
+    await api.delete(`/articles/${id}`);
   },
 };

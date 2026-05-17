@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { restoreAuth } from "./stores/authSlice";
 import ChatWidget from "./components/chat/ChatWidget";
+import { GlobalComboPopup } from './components/GlobalComboPopup';
 
 export default function App() {
   const dispatch = useDispatch();
@@ -30,6 +31,7 @@ export default function App() {
         pauseOnHover
       />
       <ChatWidget />
+      <GlobalComboPopup />
     </Theme>
   );
 }

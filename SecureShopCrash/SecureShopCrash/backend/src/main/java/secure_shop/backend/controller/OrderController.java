@@ -15,6 +15,8 @@ import secure_shop.backend.dto.order.OrderItemDTO;
 import secure_shop.backend.dto.order.OrderSummaryDTO;
 import secure_shop.backend.dto.order.request.OrderCreateRequest;
 import secure_shop.backend.dto.order.request.OrderStatusChangeRequest;
+import secure_shop.backend.dto.payment.BankTransferQrDTO;
+import secure_shop.backend.service.BankTransferService;
 import secure_shop.backend.service.OrderService;
 import secure_shop.backend.service.OrderItemService;
 
@@ -28,6 +30,7 @@ public class OrderController {
 
     private final OrderService orderService;
     private final OrderItemService orderItemService;
+    private final BankTransferService bankTransferService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -60,6 +63,15 @@ public class OrderController {
                                                 @AuthenticationPrincipal CustomUserDetails userDetails) {
         UUID userId = userDetails.getUser().getId();
         return ResponseEntity.ok(orderService.createOrder(request, userId));
+    }
+
+    @GetMapping("/{id}/bank-transfer-qr")
+    @PreAuthorize("@securityService.canAccessOrder(#id, authentication)")
+    public ResponseEntity<BankTransferQrDTO> getBankTransferQr(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(
+                bankTransferService.buildQrForOrder(id, userDetails.getUser().getId()));
     }
 
     @PutMapping("/{id}")

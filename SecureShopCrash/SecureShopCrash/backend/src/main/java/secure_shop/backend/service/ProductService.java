@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import secure_shop.backend.dto.product.ProductDTO;
 import secure_shop.backend.dto.product.ProductDetailsDTO;
 import secure_shop.backend.dto.product.ProductSummaryDTO;
+import java.util.List;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -32,4 +33,10 @@ public interface ProductService {
                                            Pageable pageable);
 
     Integer getTotalProductsCount();
+
+    // Import products from Excel
+    List<ProductDTO> importProductsFromExcel(org.springframework.web.multipart.MultipartFile file);
+
+    // Apply global discount
+    void applyGlobalDiscount(int percent, Long categoryId);
 }

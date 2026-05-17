@@ -24,8 +24,8 @@ const MegaMenu: React.FC = () => {
         categoryApi.getAll(),
         brandApi.getAll()
       ]);
-      setCategories(catRes.content || catRes);
-      setBrands(brandRes.content || brandRes);
+      setCategories((catRes as any).content ?? catRes);
+      setBrands((brandRes as any).content ?? brandRes);
     } catch (error) {
       console.error('Error fetching menu data:', error);
     } finally {
@@ -33,12 +33,6 @@ const MegaMenu: React.FC = () => {
     }
   };
 
-  const menuItems = [
-    { label: 'Thương hiệu', icon: <Tag className="w-4 h-4" /> },
-    { label: 'Khuyến mãi', icon: <TrendingUp className="w-4 h-4" /> },
-    { label: 'Deal Hot', icon: <Zap className="w-4 h-4" /> },
-    { label: 'Combo', icon: <Gift className="w-4 h-4" /> },
-  ];
 
   return (
     <div className="relative group">
@@ -121,7 +115,7 @@ const MegaMenu: React.FC = () => {
                     </li>
                     <li>
                       <Link
-                        to="/products"
+                        to="/combo-deals"
                         onClick={() => setIsOpen(false)}
                         className="text-gray-600 hover:text-purple-600 text-sm transition-colors flex items-center gap-2"
                       >

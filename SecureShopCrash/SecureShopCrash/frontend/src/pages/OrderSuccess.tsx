@@ -99,7 +99,7 @@ const OrderSuccess: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: index * 0.1 }}
                 >
-                  <ProductCard product={product} onAddToCart={() => handleAddToCart(product)} />
+                  <ProductCard product={product} />
                 </motion.div>
               ))}
             </div>

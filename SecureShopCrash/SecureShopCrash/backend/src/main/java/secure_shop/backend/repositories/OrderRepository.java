@@ -34,6 +34,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     Integer countOrdersByCreatedAtIsNotNull();
 
+    List<Order> findByStatus(OrderStatus status);
+
     //get all orders sorted by createdAt desc
     @Query("SELECT o FROM Order o ORDER BY o.createdAt DESC")
     Page<Order> findAllOrdersSortedByCreatedAtDesc(Pageable pageable);

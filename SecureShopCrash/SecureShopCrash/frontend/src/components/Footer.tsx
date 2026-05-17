@@ -56,11 +56,6 @@ const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/about" className="text-gray-300 hover:text-rose-400 transition-colors text-sm">
-                  Giới thiệu
-                </Link>
-              </li>
-              <li>
                 <Link to="/contact" className="text-gray-300 hover:text-rose-400 transition-colors text-sm">
                   Liên hệ
                 </Link>

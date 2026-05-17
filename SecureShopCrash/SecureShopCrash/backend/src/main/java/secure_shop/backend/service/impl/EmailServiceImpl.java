@@ -142,7 +142,24 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
-    
+    @Override
+    public void sendOtpEmail(String to, String otp) throws MessagingException, IOException {
+        Context context = new Context();
+        context.setVariable("email", to);
+        context.setVariable("otp", otp);
+
+        String htmlContent = templateEngine.process("otp-email", context);
+
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+        helper.setFrom("support@myshop.com");
+        helper.setTo(to);
+        helper.setSubject("🔐 Mã OTP Đăng nhập - SecureShop");
+        helper.setText(htmlContent, true);
+
+        mailSender.send(message);
+    }
 
     private String formatCurrency(BigDecimal value, NumberFormat nf) {
         if (value == null) return nf.format(0);

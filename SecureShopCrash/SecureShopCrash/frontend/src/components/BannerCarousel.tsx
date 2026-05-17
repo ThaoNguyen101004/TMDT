@@ -1,56 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-interface Banner {
-  id: number;
-  title: string;
-  subtitle: string;
-  image: string;
-  cta: string;
-  link?: string;
-  badge?: string;
-  discount?: string;
-}
-
-const BANNERS: Banner[] = [
-  {
-    id: 1,
-    title: 'Mỹ phẩm Premium',
-    subtitle: 'Bộ sưu tập mới nhất từ các thương hiệu hàng đầu',
-    image: 'https://images.unsplash.com/photo-1596462502278-af242a95b598?w=1200&h=400&fit=crop',
-    cta: 'Mua Ngay',
-    badge: 'FLASH SALE',
-    discount: '-50%',
-  },
-  {
-    id: 2,
-    title: 'Chăm Sóc Da Hoàn Hảo',
-    subtitle: 'Sản phẩm skincare giúp da mịn màng, sáng bóng',
-    image: 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=1200&h=400&fit=crop',
-    cta: 'Khám Phá',
-    badge: 'DEAL HOT',
-    discount: 'Giảm 25K',
-  },
-  {
-    id: 3,
-    title: 'Nước Hoa & Mùi Hương',
-    subtitle: 'Hương thơm lâu lưu, sang trọng cho bạn',
-    image: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=1200&h=400&fit=crop',
-    cta: 'Xem Chi Tiết',
-    badge: 'MỚI POSTED',
-  },
-  {
-    id: 4,
-    title: 'Trang Điểm Chuyên Nghiệp',
-    subtitle: 'Sản phẩm trang điểm cho mọi dịp',
-    image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1200&h=400&fit=crop',
-    cta: 'Mua Ngay',
-    discount: 'Freeship',
-  },
-];
+import { useUIConfig } from '../stores/uiConfigStore';
 
 const BannerCarousel: React.FC = () => {
+  const { config } = useUIConfig();
+  const BANNERS = config.banners;
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
 
@@ -71,12 +27,18 @@ const BannerCarousel: React.FC = () => {
     }),
   };
 
+  // Reset index if banners change
   useEffect(() => {
+    setCurrentIndex(0);
+  }, [BANNERS.length]);
+
+  useEffect(() => {
+    if (BANNERS.length === 0) return;
     const timer = setInterval(() => {
       handleNext();
     }, 5000);
     return () => clearInterval(timer);
-  }, [currentIndex]);
+  }, [currentIndex, BANNERS.length]);
 
   const handleNext = () => {
     setDirection(1);
@@ -87,6 +49,8 @@ const BannerCarousel: React.FC = () => {
     setDirection(-1);
     setCurrentIndex((prev) => (prev - 1 + BANNERS.length) % BANNERS.length);
   };
+
+  if (BANNERS.length === 0) return null;
 
   const currentBanner = BANNERS[currentIndex];
 

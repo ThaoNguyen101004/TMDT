@@ -19,6 +19,8 @@ public class ArticleMapper {
                 .publishedAt(article.getPublishedAt())
                 .active(article.getActive())
                 .adminName(article.getAdmin() != null ? article.getAdmin().getName() : null)
+                .externalUrl(article.getExternalUrl())
+                .imageUrl(article.getImageUrl())
                 .build();
     }
 
@@ -28,8 +30,10 @@ public class ArticleMapper {
                 .slug(generateSlug(req.getTitle()))
                 .summary(req.getSummary())
                 .content(req.getContent())
+                .externalUrl(req.getExternalUrl())
+                .imageUrl(req.getImageUrl())
                 .admin(admin)
-                .active(true)
+                .active(req.getActive() != null ? req.getActive() : true)
                 .build();
     }
 

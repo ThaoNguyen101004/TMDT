@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import secure_shop.backend.dto.user.UpdateUserProfileRequest;
 import secure_shop.backend.dto.user.UserDTO;
 import secure_shop.backend.dto.user.UserProfileDTO;
 import secure_shop.backend.config.security.CustomUserDetails;
@@ -24,6 +25,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserController {
     private final UserService service;
+    private final UserMapper userMapper;
 
     // Current user
     @GetMapping("/me")
@@ -36,8 +38,9 @@ public class UserController {
     @PutMapping("/me")
     public ResponseEntity<UserProfileDTO> updateProfile(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody User req) {
-        return ResponseEntity.ok(new UserMapper().toDTO(service.updateUser(userDetails.getUser().getId(), req)));
+            @RequestBody UpdateUserProfileRequest request) {
+        UserProfileDTO updated = service.updateProfile(userDetails.getUser().getId(), request);
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/me")

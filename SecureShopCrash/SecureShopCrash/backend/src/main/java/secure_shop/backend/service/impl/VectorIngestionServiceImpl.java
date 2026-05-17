@@ -1,9 +1,9 @@
 package secure_shop.backend.service.impl;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import secure_shop.backend.entities.Product;
 import secure_shop.backend.repositories.ProductRepository;
@@ -13,15 +13,24 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class VectorIngestionServiceImpl implements VectorIngestionService {
 
-    private final VectorStore vectorStore;
+    @Autowired(required = false)
+    private VectorStore vectorStore;
+
     private final ProductRepository productRepository;
+
+    public VectorIngestionServiceImpl(ProductRepository productRepository) {
+        this.productRepository = productRepository;
+    }
 
     @Override
     public void ingestPoliciesAndTopProducts() {
+        if (vectorStore == null) {
+            log.warn("VectorStore not available — skipping ingestion. Configure Spring AI to enable.");
+            return;
+        }
         List<Product> top = productRepository.findTop5ByActiveTrueOrderByReviewCountDesc();
         List<Document> docs = new ArrayList<>();
 
@@ -51,5 +60,34 @@ public class VectorIngestionServiceImpl implements VectorIngestionService {
     private String buildProductText(Product p) {
         return String.format("Sản phẩm %s (SKU %s) giá %s, đánh giá %.1f với %d lượt đánh giá. Mô tả ngắn: %s",
                 p.getName(), p.getSku(), p.getPrice(), p.getRating(), p.getReviewCount(), Optional.ofNullable(p.getShortDesc()).orElse("(không có)"));
+    }
+
+    @Override
+    public void ingestAllProducts() {
+        if (vectorStore == null) {
+            log.warn("VectorStore not available — skipping full product ingestion.");
+            return;
+        }
+        
+        List<Product> allActiveProducts = productRepository.findAll().stream()
+                .filter(Product::getActive)
+                .collect(Collectors.toList());
+
+        List<Document> docs = allActiveProducts.stream().map(p -> new Document(
+                buildProductText(p),
+                Map.of(
+                        "type", "product",
+                        "id", p.getId().toString(),
+                        "name", p.getName(),
+                        "sku", p.getSku(),
+                        "rating", String.valueOf(p.getRating()),
+                        "reviews", String.valueOf(p.getReviewCount())
+                )
+        )).collect(Collectors.toList());
+
+        if (!docs.isEmpty()) {
+            vectorStore.add(docs);
+            log.info("Indexed {} products into vector store", docs.size());
+        }
     }
 }

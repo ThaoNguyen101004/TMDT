@@ -27,7 +27,9 @@ public class DiscountServiceImpl implements DiscountService {
     @Override
     @Transactional
     public DiscountDTO createDiscount(DiscountDTO discountDTO) {
+        normalizeDiscountDto(discountDTO);
         Discount discount = discountMapper.toEntity(discountDTO);
+        normalizeDiscountEntity(discount);
         Discount savedDiscount = discountRepository.save(discount);
         return discountMapper.toDTO(savedDiscount);
     }
@@ -38,9 +40,47 @@ public class DiscountServiceImpl implements DiscountService {
         Discount discount = discountRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Discount not found with id: " + id));
 
+        normalizeDiscountDto(discountDTO);
         discountMapper.updateEntityFromDTO(discountDTO, discount);
+        normalizeDiscountEntity(discount);
         Discount updatedDiscount = discountRepository.save(discount);
         return discountMapper.toDTO(updatedDiscount);
+    }
+
+    private void normalizeDiscountDto(DiscountDTO dto) {
+        if (dto.getCode() != null) {
+            dto.setCode(sanitizeDiscountCode(dto.getCode()));
+        }
+        if (dto.getMinOrderValue() != null && dto.getMinOrderValue().signum() == 0) {
+            dto.setMinOrderValue(null);
+        }
+    }
+
+    private void normalizeDiscountEntity(Discount discount) {
+        if (discount.getCode() != null) {
+            discount.setCode(sanitizeDiscountCode(discount.getCode()));
+        }
+        if (discount.getPerUserLimit() != null && discount.getPerUserLimit() < 1) {
+            discount.setPerUserLimit(null);
+        }
+        if (discount.getMaxUsage() != null && discount.getMaxUsage() < 0) {
+            discount.setMaxUsage(null);
+        }
+        if (discount.getMinOrderValue() != null && discount.getMinOrderValue().signum() == 0) {
+            discount.setMinOrderValue(null);
+        }
+    }
+
+    /** Strip invalid chars so Bean Validation @Pattern always passes after save. */
+    private String sanitizeDiscountCode(String code) {
+        if (code == null || code.isBlank()) {
+            return code;
+        }
+        return code
+                .trim()
+                .toUpperCase(java.util.Locale.ROOT)
+                .replaceAll("\\s+", "_")
+                .replaceAll("[^A-Z0-9_-]", "");
     }
 
     @Override

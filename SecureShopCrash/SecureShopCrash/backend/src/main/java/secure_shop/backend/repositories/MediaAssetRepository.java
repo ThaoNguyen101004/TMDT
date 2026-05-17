@@ -8,8 +8,10 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface MediaAssetRepository extends JpaRepository<MediaAsset, Integer> {
-    List<MediaAsset> findByProductId(UUID productId);
+public interface MediaAssetRepository extends JpaRepository<MediaAsset, Long> {
+    List<MediaAsset> findByProduct_Id(UUID productId);
+
+    void deleteByProduct_Id(UUID productId);
 
     boolean existsById(Long id);
 

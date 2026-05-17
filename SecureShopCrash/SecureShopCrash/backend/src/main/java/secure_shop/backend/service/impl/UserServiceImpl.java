@@ -10,6 +10,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import secure_shop.backend.dto.user.UpdateUserProfileRequest;
 import secure_shop.backend.dto.user.UserDTO;
 import secure_shop.backend.dto.user.UserProfileDTO;
 import secure_shop.backend.entities.User;
@@ -24,6 +25,8 @@ import secure_shop.backend.exception.BusinessRuleViolationException;
 import secure_shop.backend.exception.ConflictException;
 import secure_shop.backend.exception.ResourceNotFoundException;
 import secure_shop.backend.service.VerificationService;
+import secure_shop.backend.service.OtpService;
+import secure_shop.backend.service.EmailService;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -41,6 +44,8 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder encoder;
     private final UserMapper userMapper;
     private final VerificationService verificationService;
+    private final OtpService otpService;
+    private final EmailService emailService;
 
     @Override
     public Optional<User> findById(UUID id) {
@@ -82,10 +87,12 @@ public class UserServiceImpl implements UserService {
             user.setEmail(req.getEmail());
         }
         if (req.getPhone() != null) {
-            user.setPhone(req.getPhone());
+            String phone = req.getPhone().isBlank() ? null : req.getPhone().trim();
+            user.setPhone(phone);
         }
         if (req.getAvatarUrl() != null) {
-            user.setAvatarUrl(req.getAvatarUrl());
+            String avatarUrl = req.getAvatarUrl().isBlank() ? null : req.getAvatarUrl().trim();
+            user.setAvatarUrl(avatarUrl);
         }
         if (req.getProvider() != null) {
             user.setProvider(req.getProvider());
@@ -105,6 +112,28 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
+    public UserProfileDTO updateProfile(UUID id, UpdateUserProfileRequest request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", id));
+
+        if (request.getName() != null && !request.getName().isBlank()) {
+            user.setName(request.getName().trim());
+        }
+        if (request.getPhone() != null) {
+            String phone = request.getPhone().isBlank() ? null : request.getPhone().trim();
+            user.setPhone(phone);
+        }
+        if (request.getAvatarUrl() != null) {
+            String avatarUrl = request.getAvatarUrl().isBlank() ? null : request.getAvatarUrl().trim();
+            user.setAvatarUrl(avatarUrl);
+        }
+
+        return userMapper.toDTO(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
     public void softDeleteUser(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
@@ -131,6 +160,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void disableUser(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
@@ -139,11 +169,14 @@ public class UserServiceImpl implements UserService {
             throw new BusinessRuleViolationException("Cannot disable deleted user. Restore first.");
         }
 
-        user.setEnabled(false);
-        userRepository.save(user);
+        int updated = userRepository.updateEnabledById(user.getId(), false);
+        if (updated == 0) {
+            throw new ResourceNotFoundException("User", userId);
+        }
     }
 
     @Override
+    @Transactional
     public void enableUser(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
@@ -152,8 +185,10 @@ public class UserServiceImpl implements UserService {
             throw new BusinessRuleViolationException("Cannot enable deleted user. Restore first.");
         }
 
-        user.setEnabled(true);
-        userRepository.save(user);
+        int updated = userRepository.updateEnabledById(userId, true);
+        if (updated == 0) {
+            throw new ResourceNotFoundException("User", userId);
+        }
     }
 
     @Override
@@ -291,9 +326,15 @@ public class UserServiceImpl implements UserService {
         // 4. Lưu vào database
         User savedUser = userRepository.save(newUser);
 
-        // 5. Gửi email xác thực
+        // 5. Gửi mã OTP xác thực qua email thay vì link
         if (savedUser != null) {
-            verificationService.sendVerificationEmail(savedUser.getEmail(), savedUser.getId().toString());
+            String tempToken = otpService.generateOtp(savedUser.getId(), savedUser.getEmail());
+            String otp = otpService.getOtp(tempToken);
+            try {
+                emailService.sendOtpEmail(savedUser.getEmail(), otp);
+            } catch (Exception e) {
+                log.error("Failed to send OTP email to: " + savedUser.getEmail(), e);
+            }
         }
 
         return savedUser;

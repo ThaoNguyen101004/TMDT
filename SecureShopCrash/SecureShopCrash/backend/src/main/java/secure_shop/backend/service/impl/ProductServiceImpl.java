@@ -11,6 +11,8 @@ import secure_shop.backend.exception.ResourceNotFoundException;
 import secure_shop.backend.mapper.ProductMapper;
 import secure_shop.backend.repositories.*;
 import secure_shop.backend.service.ProductService;
+import secure_shop.backend.utils.ExcelHelper;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -18,11 +20,20 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.document.Document;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional(readOnly = true)
 public class ProductServiceImpl implements ProductService {
+
+    @Autowired(required = false)
+    private VectorStore vectorStore;
 
     private final ProductRepository productRepository;
     private final BrandRepository brandRepository;
@@ -38,6 +49,35 @@ public class ProductServiceImpl implements ProductService {
                                                   Boolean inStock,
                                                   String keyword,
                                                   Pageable pageable) {
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            if (vectorStore != null) {
+                try {
+                    // Lớp AI (Ưu tiên): Semantic Search
+                    List<Document> docs = vectorStore.similaritySearch(
+                            SearchRequest.builder().query(keyword).topK(50).build()
+                    );
+                    
+                    if (!docs.isEmpty()) {
+                        List<UUID> productIds = docs.stream()
+                                .map(d -> d.getMetadata().get("id"))
+                                .filter(id -> id != null)
+                                .map(id -> UUID.fromString(id.toString()))
+                                .collect(Collectors.toList());
+                                
+                        if (!productIds.isEmpty()) {
+                            // Lọc thêm bằng các criteria của user (Active, Category, v.v...)
+                            return productRepository.filterProductsByIds(
+                                    active, categoryId, brandId, minPrice, maxPrice, inStock, productIds, pageable);
+                        }
+                    }
+                } catch (Exception e) {
+                    // Lớp SQL (Dự phòng): Bắt lỗi AI API (ví dụ timeout, hết quota) và fallback
+                    log.error("AI Search failed for keyword '{}'. Fallback to SQL LIKE search. Error: {}", keyword, e.getMessage());
+                }
+            }
+        }
+        
+        // SQL Fallback (hoặc khi không có keyword)
         return productRepository
                 .filterProducts(active, categoryId, brandId, minPrice, maxPrice, inStock, keyword, pageable);
     }
@@ -92,7 +132,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductDTO updateProduct(UUID id, ProductDetailsDTO dto) {
-        Product existing = productRepository.findById(id)
+        Product existing = productRepository.findByIdWithRelations(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", id));
 
         // Nếu sản phẩm đã bị xóa mềm → không cho cập nhật
@@ -103,6 +143,9 @@ public class ProductServiceImpl implements ProductService {
         existing.setSku(dto.getSku());
         existing.setName(dto.getName());
         existing.setListedPrice(dto.getListedPrice());
+        if (dto.getPrice() != null) {
+            existing.setPrice(dto.getPrice());
+        }
         existing.setActive(dto.getActive());
         existing.setShortDesc(dto.getShortDesc());
         existing.setLongDesc(dto.getLongDesc());
@@ -130,27 +173,7 @@ public class ProductServiceImpl implements ProductService {
             existing.setCategory(null);
         }
 
-        if (existing.getMediaAssets() != null) {
-            existing.getMediaAssets().clear();
-        }
-
-        if (dto.getMediaAssets() != null && !dto.getMediaAssets().isEmpty()) {
-            List<MediaAsset> newMediaAssets = dto.getMediaAssets().stream()
-                    .map(mediaDTO -> {
-                        MediaAsset media = new MediaAsset();
-                        media.setUrl(mediaDTO.getUrl());
-                        media.setAltText(mediaDTO.getAltText());
-                        media.setProduct(existing);
-                        return media;
-                    })
-                    .collect(Collectors.toList());
-
-            if (existing.getMediaAssets() == null) {
-                existing.setMediaAssets(new ArrayList<>());
-            }
-            existing.getMediaAssets().addAll(newMediaAssets);
-        }
-
+        syncMediaAssets(existing, dto);
 
         var updated = productRepository.save(existing);
         return productMapper.toProductDTO(updated);
@@ -195,5 +218,76 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public Integer getTotalProductsCount() {
         return productRepository.countProductsNotDeleted();
+    }
+
+    /**
+     * Must mutate the existing collection in-place — replacing the list breaks Hibernate orphanRemoval.
+     */
+    private void syncMediaAssets(Product existing, ProductDetailsDTO dto) {
+        if (existing.getMediaAssets() == null) {
+            existing.setMediaAssets(new ArrayList<>());
+        }
+        existing.getMediaAssets().clear();
+
+        if (dto.getMediaAssets() == null) {
+            return;
+        }
+
+        dto.getMediaAssets().stream()
+                .filter(mediaDTO -> mediaDTO.getUrl() != null && !mediaDTO.getUrl().isBlank())
+                .forEach(mediaDTO -> {
+                    MediaAsset media = new MediaAsset();
+                    media.setUrl(mediaDTO.getUrl().trim());
+                    media.setAltText(mediaDTO.getAltText());
+                    media.setProduct(existing);
+                    existing.getMediaAssets().add(media);
+                });
+    }
+
+    @Override
+    @Transactional
+    public List<ProductDTO> importProductsFromExcel(MultipartFile file) {
+        try {
+            List<ProductDetailsDTO> dtos = ExcelHelper.excelToProducts(file.getInputStream());
+            List<ProductDTO> savedProducts = new ArrayList<>();
+            for (ProductDetailsDTO dto : dtos) {
+                // Ignore if SKU already exists
+                if (productRepository.findBySku(dto.getSku()).isPresent()) {
+                    continue;
+                }
+                savedProducts.add(this.createProduct(dto));
+            }
+            return savedProducts;
+        } catch (Exception e) {
+            throw new RuntimeException("fail to store excel data: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void applyGlobalDiscount(int percent, Long categoryId) {
+        if (percent < 0 || percent > 100) {
+            throw new IllegalArgumentException("Percent must be between 0 and 100");
+        }
+        
+        List<Product> products;
+        if (categoryId != null && categoryId > 0) {
+            Category category = categoryRepository.findById(categoryId);
+            if (category == null) return;
+            products = productRepository.findByCategory(category);
+        } else {
+            products = productRepository.findAll();
+        }
+
+        BigDecimal multiplier = BigDecimal.valueOf(1.0 - (percent / 100.0));
+        
+        for (Product product : products) {
+            if (product.getListedPrice() != null && product.getActive() && product.getDeletedAt() == null) {
+                BigDecimal newPrice = product.getListedPrice().multiply(multiplier)
+                        .setScale(0, java.math.RoundingMode.HALF_UP);
+                product.setPrice(newPrice);
+                productRepository.save(product);
+            }
+        }
     }
 }

@@ -30,13 +30,13 @@ public class CartController {
 
     @PutMapping("/update")
     public ResponseEntity<?> updateQuantity(@RequestBody CartItem request) {
-        cartService.updateQuantity(request.getProductId(), request.getQuantity());
+        cartService.updateQuantity(request.getProductId(), request.getComboId(), request.getQuantity());
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("/remove/{id}")
-    public ResponseEntity<?> removeItem(@PathVariable UUID id) {
-        cartService.removeItem(id);
+    @PostMapping("/remove")
+    public ResponseEntity<?> removeItem(@RequestBody CartItem request) {
+        cartService.removeItem(request.getProductId(), request.getComboId());
         return ResponseEntity.ok().build();
     }
 

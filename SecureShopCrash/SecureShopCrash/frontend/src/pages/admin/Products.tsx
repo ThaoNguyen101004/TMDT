@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, RefreshCw } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, RefreshCw, FileUp } from 'lucide-react';
 import type { ProductSummary } from '../../types/types';
 import { productApi } from '../../utils/api';
 import ProductModal from '../../components/admin-modal/ProductModal';
@@ -26,6 +26,26 @@ const Products: React.FC<Props> = () => {
     isOpen: false,
     productId: null,
   });
+  
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setLoading(true);
+      await productApi.importExcel(file);
+      toast.success('Import sản phẩm thành công!');
+      handleReload();
+    } catch (error) {
+      console.error('Lỗi import:', error);
+      toast.error('Có lỗi xảy ra khi import file Excel.');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setLoading(false);
+    }
+  };
 
   // Load products with pagination
   const loadProducts = async (currentPage = page, currentPageSize = pageSize, search = searchTerm) => {
@@ -127,13 +147,29 @@ const Products: React.FC<Props> = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-zinc-800">Quản lý sản phẩm</h2>
-        <button 
-          onClick={handleAddProduct}
-          className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-cyan-500 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-shadow"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Thêm sản phẩm</span>
-        </button>
+        <div className="flex gap-2">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleImportExcel} 
+            accept=".xlsx, .xls" 
+            className="hidden" 
+          />
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-2 bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 hover:text-purple-600 transition-colors"
+          >
+            <FileUp className="w-4 h-4" />
+            <span>Import Excel</span>
+          </button>
+          <button 
+            onClick={handleAddProduct}
+            className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-cyan-500 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-shadow"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Thêm sản phẩm</span>
+          </button>
+        </div>
       </div>
 
       {/* Search bar */}

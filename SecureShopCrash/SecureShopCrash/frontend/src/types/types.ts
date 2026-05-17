@@ -5,6 +5,7 @@ export interface User {
   phone: string;
   role: string;
   avatarUrl?: string;
+  is2faEnabled?: boolean;
 }
 
 export interface UserSummary {
@@ -15,6 +16,25 @@ export interface UserSummary {
   role: string;
   avatarUrl?: string;
   enabled: boolean;
+}
+
+export interface ComboItem {
+  id?: string;
+  product: ProductSummary;
+  quantity: number;
+}
+
+export interface Combo {
+  id: string;
+  name: string;
+  description: string;
+  thumbnailUrl: string;
+  fixedPrice?: number;
+  discountPercent?: number;
+  startTime: string;
+  endTime: string;
+  active: boolean;
+  items: ComboItem[];
 }
 
 export interface ProductSummary {
@@ -102,13 +122,15 @@ export interface Article {
   title: string;
   slug: string;
   content: string;
+  summary?: string;
   publishedAt?: string;
   active: boolean;
   adminName?: string;
+  externalUrl?: string;
+  imageUrl?: string;
 }
 
-// Export VNPay types
-export * from "./vnpay";
+
 export interface Discount {
   id: string;
   code: string;

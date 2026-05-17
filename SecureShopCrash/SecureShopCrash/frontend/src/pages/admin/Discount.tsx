@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from "react";
-import { Plus, Edit, Percent, Calendar, Search } from "lucide-react";
+import { Plus, Edit, Percent, Calendar, Search, Zap } from "lucide-react";
 import { DiscountApi } from "../../utils/api";
 import type { Discount } from "../../types/types";
 import DiscountModal from "../../components/admin-modal/DiscountModal";
+import { toast } from 'react-toastify';
+import { productApi } from "../../utils/api";
 
 type Props = {
   data?: Discount[];
@@ -20,6 +22,10 @@ const Promotions: React.FC<Props> = ({ data, onReload }) => {
     open: boolean;
     discount?: Discount;
   }>({ open: false });
+
+  const [globalSaleOpen, setGlobalSaleOpen] = useState(false);
+  const [globalSalePercent, setGlobalSalePercent] = useState<number>(0);
+  const [globalSaleLoading, setGlobalSaleLoading] = useState(false);
 
   const filteredDiscounts = useMemo(() => {
     let filtered = discounts;
@@ -80,17 +86,45 @@ const Promotions: React.FC<Props> = ({ data, onReload }) => {
     onReload?.();
   };
 
+  const handleApplyGlobalSale = async () => {
+    if (globalSalePercent <= 0 || globalSalePercent > 100) {
+      toast.error('Phần trăm giảm giá phải từ 1 đến 100');
+      return;
+    }
+    try {
+      setGlobalSaleLoading(true);
+      await productApi.applyGlobalSale(globalSalePercent);
+      toast.success('Đã áp dụng Flash Sale cho toàn bộ sản phẩm!');
+      setGlobalSaleOpen(false);
+      setGlobalSalePercent(0);
+    } catch (error) {
+      console.error('Lỗi khi áp dụng Flash Sale:', error);
+      toast.error('Có lỗi xảy ra khi áp dụng Flash Sale');
+    } finally {
+      setGlobalSaleLoading(false);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-zinc-800">Quản lý khuyến mãi</h2>
-        <button
-          onClick={handleCreateDiscount}
-          className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-cyan-500 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-shadow"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Thêm khuyến mãi</span>
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setGlobalSaleOpen(true)}
+            className="flex items-center gap-2 bg-orange-100 text-orange-600 border border-orange-200 px-4 py-2 rounded-lg hover:bg-orange-200 transition-colors"
+          >
+            <Zap className="w-4 h-4" />
+            <span className="font-medium">Flash Sale Toàn Hệ Thống</span>
+          </button>
+          <button
+            onClick={handleCreateDiscount}
+            className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-cyan-500 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-shadow"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Thêm khuyến mãi</span>
+          </button>
+        </div>
       </div>
 
       {/* Search and Filter Bar */}
@@ -214,6 +248,58 @@ const Promotions: React.FC<Props> = ({ data, onReload }) => {
         discount={discountModal.discount}
         onSuccess={handleDiscountModalSuccess}
       />
+
+      {/* Global Sale Modal */}
+      {globalSaleOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-orange-50">
+              <h3 className="text-xl font-bold text-orange-700 flex items-center gap-2">
+                <Zap className="w-5 h-5" />
+                Cấu hình Flash Sale Đồng Loạt
+              </h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-600">
+                Tính năng này sẽ tự động thay đổi giá bán (price) của TẤT CẢ sản phẩm đang hoạt động trên toàn hệ thống bằng cách giảm % so với giá niêm yết (listedPrice).
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mức giảm giá (%)
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={globalSalePercent}
+                    onChange={(e) => setGlobalSalePercent(Number(e.target.value))}
+                    className="w-full pl-4 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-lg font-bold"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-4">
+                    <span className="text-gray-500 font-bold">%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+              <button
+                onClick={() => setGlobalSaleOpen(false)}
+                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleApplyGlobalSale}
+                disabled={globalSaleLoading || globalSalePercent <= 0 || globalSalePercent > 100}
+                className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium disabled:opacity-50 flex items-center gap-2"
+              >
+                {globalSaleLoading ? 'Đang áp dụng...' : 'Áp dụng ngay'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

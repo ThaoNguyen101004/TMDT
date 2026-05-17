@@ -63,11 +63,23 @@ const DiscountModal: React.FC<DiscountModalProps> = ({
     setIsLoading(true);
 
     try {
+      const sanitizedCode = formData.code
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^A-Z0-9_-]/g, '');
+
+      if (!sanitizedCode) {
+        setErrors({ code: 'Mã giảm giá không hợp lệ (chỉ A-Z, 0-9, -, _)' });
+        setIsLoading(false);
+        return;
+      }
+
       const discountData = {
-        code: formData.code.trim().toUpperCase(),
+        code: sanitizedCode,
         discountType: formData.discountType,
         discountValue: formData.discountValue,
-        minOrderValue: formData.minOrderValue,
+        minOrderValue: formData.minOrderValue > 0 ? formData.minOrderValue : null,
         active: formData.active,
         startAt: new Date(formData.startAt).toISOString(),
         endAt: new Date(formData.endAt).toISOString(),

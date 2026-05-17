@@ -5,8 +5,18 @@ import { cartService } from '../utils/cartService';
 import { Link } from 'react-router-dom';
 import { productApi } from '../utils/api';
 import type { ProductSummary } from '../types/types';
+import { useUIConfig } from '../stores/uiConfigStore';
+
+const COLS_CLASS: Record<number, string> = {
+  2: 'grid-cols-1 sm:grid-cols-2',
+  3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+  4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4',
+};
 
 const FeaturedProducts: React.FC = () => {
+  const { config } = useUIConfig();
+  const { count, columnsPerRow } = config.featuredProducts;
+
   const [products, setProducts] = useState<ProductSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -21,7 +31,7 @@ const FeaturedProducts: React.FC = () => {
         
         const data = await productApi.getAll({ 
           page: 0, 
-          size: 4, 
+          size: count, 
           sort: 'price,desc' 
         });
         
@@ -47,30 +57,20 @@ const FeaturedProducts: React.FC = () => {
     return () => {
       abortController.abort();
     };
-  }, []);
+  }, [count]);
 
-  const handleAddToCart = async (product: ProductSummary) => {
-    const success = await cartService.addToCart(product);
-    if (success) {
-      window.dispatchEvent(new Event('cartUpdated'));
-    }
-  };
+  const colsClass = COLS_CLASS[columnsPerRow] ?? COLS_CLASS[4];
 
   if (loading) {
     return (
       <section className="py-16 bg-gray-50 w-full">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-zinc-800 mb-4">
-              Sản Phẩm Nổi Bật
-            </h2>
+            <h2 className="text-3xl font-bold text-zinc-800 mb-4">Sản Phẩm Nổi Bật</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, index) => (
-              <div 
-                key={index} 
-                className="bg-white rounded-lg shadow-md overflow-hidden"
-              >
+          <div className={`grid ${colsClass} gap-6`}>
+            {[...Array(count)].map((_, index) => (
+              <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
                 <div className="w-full h-48 bg-gray-200 animate-pulse"></div>
                 <div className="p-4 space-y-3">
                   <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
@@ -90,12 +90,8 @@ const FeaturedProducts: React.FC = () => {
       <section className="py-16 bg-gray-50 w-full">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-zinc-800 mb-4">
-              Sản Phẩm Nổi Bật
-            </h2>
-            <p className="text-gray-500 mb-4">
-              Không thể tải sản phẩm. Vui lòng thử lại sau.
-            </p>
+            <h2 className="text-3xl font-bold text-zinc-800 mb-4">Sản Phẩm Nổi Bật</h2>
+            <p className="text-gray-500 mb-4">Không thể tải sản phẩm. Vui lòng thử lại sau.</p>
             <button
               onClick={() => window.location.reload()}
               className="inline-block bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
@@ -113,12 +109,8 @@ const FeaturedProducts: React.FC = () => {
       <section className="py-16 bg-gray-50 w-full">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-zinc-800 mb-4">
-              Sản Phẩm Nổi Bật
-            </h2>
-            <p className="text-gray-500">
-              Hiện tại chưa có sản phẩm nổi bật
-            </p>
+            <h2 className="text-3xl font-bold text-zinc-800 mb-4">Sản Phẩm Nổi Bật</h2>
+            <p className="text-gray-500">Hiện tại chưa có sản phẩm nổi bật</p>
           </div>
         </div>
       </section>
@@ -135,11 +127,9 @@ const FeaturedProducts: React.FC = () => {
           viewport={{ once: true }}
           className="text-center mb-12"
         >
-          <h2 className="text-3xl font-bold text-zinc-800 mb-4">
-            Sản Phẩm Nổi Bật
-          </h2>
+          <h2 className="text-3xl font-bold text-zinc-800 mb-4">Sản Phẩm Nổi Bật</h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Khám phá những sản phẩm an ninh được khách hàng tin tưởng và lựa chọn nhiều nhất
+            Khám phá những sản phẩm được khách hàng tin tưởng và lựa chọn nhiều nhất
           </p>
         </motion.div>
 
@@ -148,7 +138,7 @@ const FeaturedProducts: React.FC = () => {
           whileInView={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
           viewport={{ once: true }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+          className={`grid ${colsClass} gap-6`}
         >
           {products.map((product, index) => (
             <motion.div
@@ -158,10 +148,7 @@ const FeaturedProducts: React.FC = () => {
               transition={{ duration: 0.6, delay: index * 0.1 }}
               viewport={{ once: true }}
             >
-              <ProductCard
-                product={product}
-                onAddToCart={handleAddToCart}
-              />
+              <ProductCard product={product} />
             </motion.div>
           ))}
         </motion.div>

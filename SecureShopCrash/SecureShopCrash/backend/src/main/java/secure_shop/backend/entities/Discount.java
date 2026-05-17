@@ -29,7 +29,7 @@ public class Discount extends BaseEntity {
     @NotBlank(message = "Mã giảm giá không được để trống")
     @Size(max = 50, message = "Mã giảm giá tối đa 50 ký tự")
     @Pattern(
-            regexp = "^[A-Z0-9_-]+$",
+            regexp = "^[A-Z0-9][A-Z0-9_-]*$",
             message = "Mã giảm giá chỉ được chứa chữ in hoa, số và ký tự '-' hoặc '_'"
     )
     @Column(nullable = false, unique = true, length = 50)
@@ -51,12 +51,12 @@ public class Discount extends BaseEntity {
     @Column(precision = 15, scale = 2)
     private BigDecimal minOrderValue;
 
-    @DecimalMin(value = "0.0", inclusive = true, message = "Giới hạn số lần sử dụng không được âm")
-    @Digits(integer = 13, fraction = 2, message = "Giới hạn số lần sử dụng không hợp lệ")
-    @Column(precision = 15, scale = 2)
+    @Min(value = 0, message = "Giới hạn số lần sử dụng không được âm")
+    @Column
     private Integer maxUsage;
 
     @Min(value = 1, message = "Giới hạn mỗi người dùng ít nhất là 1 lần")
+    @Column
     private Integer perUserLimit;
 
     @Builder.Default

@@ -49,10 +49,6 @@ public class User extends BaseEntity {
     private Boolean enabled = true;
 
     @Size(max = 2048, message = "Đường dẫn ảnh quá dài")
-    @Pattern(
-            regexp = "^(https?:\\/\\/)?([\\w\\-]+\\.)+[\\w\\-]+(\\/.*)?$",
-            message = "URL ảnh đại diện không hợp lệ"
-    )
     @Column(columnDefinition = "TEXT")
     private String avatarUrl;
 

@@ -3,8 +3,10 @@ package secure_shop.backend.exception;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.TransactionSystemException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -100,7 +102,22 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({DataIntegrityViolationException.class, IllegalArgumentException.class})
     public ResponseEntity<ErrorResponse> handleBadRequest(Exception ex, HttpServletRequest req) {
-        return buildErrorResponse("BAD_REQUEST", ex.getMessage(), req, HttpStatus.BAD_REQUEST);
+        return buildErrorResponse("BAD_REQUEST", resolveRootMessage(ex), req, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler({TransactionSystemException.class, ConstraintViolationException.class})
+    public ResponseEntity<ErrorResponse> handlePersistenceValidation(Exception ex, HttpServletRequest req) {
+        log.warn("Persistence validation failed at {}: {}", req.getRequestURI(), resolveRootMessage(ex));
+        return buildErrorResponse("VALIDATION_ERROR", resolveRootMessage(ex), req, HttpStatus.BAD_REQUEST);
+    }
+
+    private String resolveRootMessage(Throwable ex) {
+        Throwable current = ex;
+        while (current.getCause() != null && current.getCause() != current) {
+            current = current.getCause();
+        }
+        String message = current.getMessage();
+        return message != null && !message.isBlank() ? message : ex.getMessage();
     }
 
     @ExceptionHandler(Exception.class)

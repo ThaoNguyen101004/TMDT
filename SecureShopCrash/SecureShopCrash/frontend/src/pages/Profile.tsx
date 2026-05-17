@@ -9,11 +9,8 @@ import { userApi, AddressApi, ReviewApi } from '../utils/api';
 import axiosInstance from '../utils/axiosConfig';
 import { authService } from '../utils/authService';
 import { imageUploadService } from '../utils/imageUploadService';
-import {
-  fetchProvinces as fetchProvincesApi,
-  fetchDistricts as fetchDistrictsApi,
-  fetchWards as fetchWardsApi,
-} from '../utils/vietnamProvinces';
+
+import AddressFields from '../components/AddressFields';
 import {
   Star,
   CheckCircle,
@@ -103,12 +100,12 @@ const Profile: React.FC = () => {
     navigate('/');
   };
 
-  // Profile
   const [formData, setFormData] = useState({
     id: user?.id || '',
     name: user?.name || '',
     phone: user?.phone || '',
     avatarUrl: user?.avatarUrl || '',
+    is2faEnabled: user?.is2faEnabled || false,
   });
 
   useEffect(() => {
@@ -137,6 +134,7 @@ const Profile: React.FC = () => {
         name: user.name || '',
         phone: user.phone || '',
         avatarUrl: user.avatarUrl || '',
+        is2faEnabled: user.is2faEnabled || false,
       });
     }
   }, [user]);
@@ -161,12 +159,11 @@ const Profile: React.FC = () => {
       const oldAvatarUrl = formData.avatarUrl;
 
       const result = await imageUploadService.uploadImage(file, {
-        bucket: 'avatars',
-        folder: 'users'
+        bucket: 'media',
+        folder: 'avatars'
       });
 
       const updateData = {
-        id: formData.id,
         name: formData.name,
         phone: formData.phone?.trim() || null,
         avatarUrl: result.url
@@ -174,12 +171,8 @@ const Profile: React.FC = () => {
 
       await userApi.updateProfile(updateData);
 
-      if (oldAvatarUrl) {
-        try {
-          await imageUploadService.deleteImage(oldAvatarUrl, 'avatars');
-        } catch (deleteError) {
-          console.error('Failed to delete old avatar:', deleteError);
-        }
+      if (oldAvatarUrl && oldAvatarUrl !== result.url) {
+        await imageUploadService.deleteImage(oldAvatarUrl, 'media');
       }
       
       toast.success('Cập nhật ảnh đại diện thành công!');
@@ -223,8 +216,9 @@ const Profile: React.FC = () => {
 
     try {
       const dataToUpdate = {
-        ...formData,
+        name: formData.name.trim(),
         phone: formData.phone?.trim() || null,
+        avatarUrl: formData.avatarUrl?.trim() || null,
       };
 
       await userApi.updateProfile(dataToUpdate);
@@ -242,6 +236,27 @@ const Profile: React.FC = () => {
       console.error("Update profile failed:", error);
       const errorMsg = error.response?.data?.message || "Cập nhật thất bại, vui lòng thử lại!";
       toast.error(errorMsg);
+    }
+  };
+
+  const handleToggle2FA = async () => {
+    try {
+      const newStatus = !formData.is2faEnabled;
+      await axiosInstance.post(`/users/me/toggle-2fa?enable=${newStatus}`);
+      setFormData(prev => ({ ...prev, is2faEnabled: newStatus }));
+      
+      // Update local storage user
+      const response = await axiosInstance.get("/auth/me");
+      const updatedUser = response.data;
+      const token = localStorage.getItem("accessToken");
+      if (token) {
+        dispatch(restoreAuthSuccess({ user: updatedUser, accessToken: token }));
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+      }
+      
+      toast.success(newStatus ? "Đã bật xác thực 2 bước!" : "Đã tắt xác thực 2 bước!");
+    } catch (error) {
+      toast.error("Không thể thay đổi trạng thái 2FA");
     }
   };
 
@@ -302,20 +317,14 @@ const Profile: React.FC = () => {
     phone: '',
     street: '',
     ward: '',
+    district: '',
     province: '',
     isDefault: false,
   });
   const [showAddressForm, setShowAddressForm] = useState(false);
 
-  // Province API state
-  const [provinces, setProvinces] = useState<any[]>([]);
-  const [districts, setDistricts] = useState<any[]>([]);
-  const [wards, setWards] = useState<any[]>([]);
+  // Province/District/Ward state (3-level)
   const [selectedProvinceId, setSelectedProvinceId] = useState<string>('');
-  const [selectedDistrictId, setSelectedDistrictId] = useState<string>('');
-  const [loadingProvinces, setLoadingProvinces] = useState(false);
-  const [loadingDistricts, setLoadingDistricts] = useState(false);
-  const [loadingWards, setLoadingWards] = useState(false);
 
   const fetchAddresses = async () => {
     setLoadingAddresses(true);
@@ -329,66 +338,8 @@ const Profile: React.FC = () => {
     }
   };
 
-  // Fetch provinces using new API
-  const fetchProvinces = async () => {
-    console.log('=== fetchProvinces called ===');
-    setLoadingProvinces(true);
-    try {
-      const results = await fetchProvincesApi();
-      console.log('Provinces fetched:', results.length, results.slice(0, 3));
-      setProvinces(results);
-      if (results.length === 0) {
-        toast.error('Lỗi khi tải danh sách tỉnh thành!');
-      }
-    } catch (error) {
-      console.error('Error fetching provinces:', error);
-      toast.error('Lỗi khi tải danh sách tỉnh thành!');
-    } finally {
-      setLoadingProvinces(false);
-    }
-  };
-
-  // Fetch districts when province is selected
-  const fetchDistricts = async (provinceId: string) => {
-    console.log('=== fetchDistricts called ===', provinceId);
-    setLoadingDistricts(true);
-    setDistricts([]);
-    setWards([]);
-    setSelectedDistrictId('');
-    try {
-      const results = await fetchDistrictsApi(provinceId);
-      console.log('Districts fetched:', results.length, results);
-      setDistricts(results);
-      if (results.length === 0) {
-        toast.warning('Không tải được quận/huyện');
-      }
-    } catch (error) {
-      console.error('Error fetching districts:', error);
-      toast.error('Lỗi khi tải danh sách quận huyện!');
-    } finally {
-      setLoadingDistricts(false);
-    }
-  };
-
-  // Fetch wards when district is selected
-  const fetchWards = async (districtId: string) => {
-    console.log('=== fetchWards called ===', districtId);
-    setLoadingWards(true);
-    setWards([]);
-    try {
-      const results = await fetchWardsApi(districtId);
-      console.log('Wards fetched:', results.length, results);
-      setWards(results);
-      if (results.length === 0) {
-        toast.warning('Không tải được phường/xã');
-      }
-    } catch (error) {
-      console.error('Error fetching wards:', error);
-      toast.error('Lỗi khi tải danh sách phường xã!');
-    } finally {
-      setLoadingWards(false);
-    }
-  };
+  // fetchProvinces no longer needed - using static list
+  const fetchProvinces = async () => {};
 
   useEffect(() => {
     if (activeTab === 'address') {
@@ -400,48 +351,7 @@ const Profile: React.FC = () => {
   const handleAddressInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-    
-    console.log('=== handleAddressInputChange ===', { name, value, type });
-    console.log('Current provinces:', provinces.length, 'districts:', districts.length, 'wards:', wards.length);
-    
-    if (name === 'province') {
-      const province = provinces.find(p => p.province_id === value);
-      console.log('Selected province:', province);
-      setSelectedProvinceId(value);
-      setAddressForm(prev => ({ 
-        ...prev, 
-        province: province?.province_name || '', 
-        ward: '' 
-      }));
-      setSelectedDistrictId('');
-      if (value) {
-        console.log('Calling fetchDistricts with provinceId:', value);
-        fetchDistricts(value);
-      } else {
-        setDistricts([]);
-        setWards([]);
-      }
-    } else if (name === 'district') {
-      const district = districts.find(d => d.district_id === value);
-      console.log('Selected district:', district, 'from districts:', districts);
-      setSelectedDistrictId(value);
-      if (value) {
-        console.log('Calling fetchWards with districtId:', value);
-        fetchWards(value);
-      } else {
-        setWards([]);
-      }
-    } else if (name === 'ward') {
-      const ward = wards.find(w => w.ward_id === value);
-      const district = districts.find(d => d.district_id === selectedDistrictId);
-      console.log('Selected ward:', ward, 'district:', district);
-      setAddressForm(prev => ({ 
-        ...prev, 
-        ward: ward && district ? `${ward.ward_name}, ${district.district_name}` : '' 
-      }));
-    } else {
-      setAddressForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-    }
+    setAddressForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleAddressSubmit = async (e: React.FormEvent) => {
@@ -469,6 +379,7 @@ const Profile: React.FC = () => {
       phone: addr.phone,
       street: addr.street,
       ward: addr.ward,
+      district: (addr as any).district || '',
       province: addr.province,
       isDefault: addr.isDefault,
     });
@@ -476,25 +387,12 @@ const Profile: React.FC = () => {
     setShowAddressForm(true);
     // Reset selections when editing
     setSelectedProvinceId('');
-    setSelectedDistrictId('');
-    setDistricts([]);
-    setWards([]);
   };
 
     // Reset address form
   const resetAddressForm = () => {
-    setAddressForm({ 
-      name: '', 
-      phone: '', 
-      street: '', 
-      ward: '', 
-      province: '', 
-      isDefault: false 
-    });
+    setAddressForm({ name: '', phone: '', street: '', ward: '', district: '', province: '', isDefault: false });
     setSelectedProvinceId('');
-    setSelectedDistrictId('');
-    setDistricts([]);
-    setWards([]);
   };
 
   const handleSetDefault = async (id: number) => {
@@ -531,7 +429,7 @@ const Profile: React.FC = () => {
     { key: 'address', label: 'Địa chỉ' },
     { key: 'payment', label: 'Phương thức thanh toán' },
     { key: 'password', label: 'Đổi mật khẩu' },
-    { key: 'settings', label: 'Tùy chỉnh khác' },
+    
   ];
 
   const handleMenuItemClick = (key: string) => {
@@ -631,7 +529,34 @@ const Profile: React.FC = () => {
                 <option>Khác</option>
               </select>
             </div>
-            <button className="mt-4 bg-purple-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-purple-700 w-full sm:w-auto text-sm sm:text-base">
+            
+            <div className="mt-6 border-t pt-6">
+              <h3 className="text-lg font-semibold text-zinc-800 mb-2">Bảo mật</h3>
+              <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border">
+                <div>
+                  <p className="font-medium text-gray-800">Xác thực 2 bước (2FA)</p>
+                  <p className="text-sm text-gray-500">Tăng cường bảo mật bằng cách yêu cầu mã OTP gửi qua email khi đăng nhập.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleToggle2FA}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                    formData.is2faEnabled ? 'bg-purple-600' : 'bg-gray-200'
+                  }`}
+                  role="switch"
+                  aria-checked={formData.is2faEnabled}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      formData.is2faEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" className="mt-6 bg-purple-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-purple-700 w-full sm:w-auto text-sm sm:text-base">
               Lưu thay đổi
             </button>
           </form>
@@ -886,71 +811,14 @@ const Profile: React.FC = () => {
                         />
                       </div>
                       
-                      {/* Province Selector */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Tỉnh / Thành phố <span className="text-red-500">*</span>
-                        </label>
-                        <select 
-                          name="province" 
-                          value={selectedProvinceId} 
-                          onChange={handleAddressInputChange} 
-                          className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" 
-                          required
-                          disabled={loadingProvinces}
-                        >
-                          <option value="">-- Chọn Tỉnh / Thành phố --</option>
-                          {provinces.map(province => (
-                            <option key={province.province_id} value={province.province_id}>
-                              {province.province_name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* District Selector */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Quận / Huyện <span className="text-red-500">*</span>
-                        </label>
-                        <select 
-                          name="district" 
-                          value={selectedDistrictId} 
-                          onChange={handleAddressInputChange} 
-                          className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed" 
-                          required
-                          disabled={!selectedProvinceId || loadingDistricts}
-                        >
-                          <option value="">-- Chọn Quận / Huyện --</option>
-                          {districts.map(district => (
-                            <option key={district.district_id} value={district.district_id}>
-                              {district.district_name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Ward Selector */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Phường / Xã <span className="text-red-500">*</span>
-                        </label>
-                        <select 
-                          name="ward" 
-                          value={wards.find(w => addressForm.ward.includes(w.ward_name))?.ward_id || ''} 
-                          onChange={handleAddressInputChange} 
-                          className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed" 
-                          required
-                          disabled={!selectedDistrictId || loadingWards}
-                        >
-                          <option value="">-- Chọn Phường / Xã --</option>
-                          {wards.map(ward => (
-                            <option key={ward.ward_id} value={ward.ward_id}>
-                              {ward.ward_name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      <AddressFields
+                        province={addressForm.province}
+                        district={addressForm.district}
+                        ward={addressForm.ward}
+                        onProvinceChange={(name, _id) => setAddressForm(prev => ({ ...prev, province: name, district: '', ward: '' }))}
+                        onDistrictChange={(name, _id) => setAddressForm(prev => ({ ...prev, district: name, ward: '' }))}
+                        onWardChange={name => setAddressForm(prev => ({ ...prev, ward: name }))}
+                      />
 
                       {/* Default Checkbox */}
                       <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
@@ -1056,10 +924,7 @@ const Profile: React.FC = () => {
           </div>
         );
 
-      case 'settings':
-        return <h2 className="text-xl font-semibold mb-4">Tùy chỉnh khác</h2>;
-      default:
-        return null;
+      
     }
   };
 
