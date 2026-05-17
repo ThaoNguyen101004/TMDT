@@ -92,9 +92,11 @@ const Login: React.FC = () => {
       setTimeout(() => {
         navigate(user.role === "ADMIN" ? "/admin" : "/");
       }, 0);
-    } catch {
+    } catch (error: any) {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("tokenExpiresAt");
+      const message = error.response?.data?.message || "Email hoặc mật khẩu không đúng!";
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
