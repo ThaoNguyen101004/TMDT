@@ -58,8 +58,9 @@ const Pad = ({ n }: { n: number }) => (
 );
 
 // ── Card sản phẩm Flash Sale ──────────────────────────────────────────────────
-const FlashCard: React.FC<{ product: ProductSummary; onAddToCart: (p: ProductSummary) => void }> = ({
+const FlashCard: React.FC<{ product: ProductSummary; visibleCount: number; onAddToCart: (p: ProductSummary) => void }> = ({
   product,
+  visibleCount,
   onAddToCart,
 }) => {
   const discountPct =
@@ -71,7 +72,10 @@ const FlashCard: React.FC<{ product: ProductSummary; onAddToCart: (p: ProductSum
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
 
   return (
-    <div className="group relative flex flex-col bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden w-48 flex-shrink-0">
+    <div 
+      className="group relative flex flex-col bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden flex-shrink-0"
+      style={{ width: `calc((100% - ${(visibleCount - 1) * 16}px) / ${visibleCount})` }}
+    >
       {/* Badge % giảm */}
       {discountPct > 0 && (
         <span className="absolute top-2 left-2 z-10 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
@@ -198,7 +202,11 @@ const FlashSale: React.FC = () => {
           <div className="h-10 w-72 bg-pink-100 animate-pulse rounded-xl mb-6" />
           <div className="flex gap-4">
             {[...Array(visibleCount)].map((_, i) => (
-              <div key={i} className="w-48 h-72 bg-pink-50 rounded-2xl animate-pulse flex-shrink-0" />
+              <div 
+                key={i} 
+                className="h-72 bg-pink-50 rounded-2xl animate-pulse flex-shrink-0"
+                style={{ width: `calc((100% - ${(visibleCount - 1) * 16}px) / ${visibleCount})` }}
+              />
             ))}
           </div>
         </div>
@@ -278,11 +286,11 @@ const FlashSale: React.FC = () => {
         <div className="overflow-hidden rounded-2xl">
           <motion.div
             className="flex gap-4"
-            animate={{ x: -(offset * (192 + 16)) }}
+            animate={{ x: `calc(-${offset} * ((100% + 16px) / ${visibleCount}))` }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           >
             {products.map((product) => (
-              <FlashCard key={product.id} product={product} onAddToCart={handleAddToCart} />
+              <FlashCard key={product.id} product={product} visibleCount={visibleCount} onAddToCart={handleAddToCart} />
             ))}
           </motion.div>
         </div>

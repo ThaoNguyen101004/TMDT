@@ -58,7 +58,7 @@ function SortableSection({ id, label }: { id: string; label: string }) {
 }
 
 // ── Sub-panel tabs ────────────────────────────────────────────────────────────
-type Panel = 'banner' | 'featured' | 'voucher' | 'flashsale' | 'whychoose' | 'order' | 'products';
+type Panel = 'banner' | 'featured' | 'voucher' | 'flashsale' | 'whychoose' | 'order' | 'products' | 'contact';
 
 const PANELS: { key: Panel; label: string }[] = [
   { key: 'order', label: '📐 Thứ tự Section' },
@@ -68,6 +68,7 @@ const PANELS: { key: Panel; label: string }[] = [
   { key: 'flashsale', label: '⚡ Flash Sale' },
   { key: 'whychoose', label: '💡 Tại sao chọn' },
   { key: 'products', label: '🛍️ Trang SP' },
+  { key: 'contact', label: '📞 Liên hệ' },
 ];
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -309,6 +310,68 @@ const UICustomizer: React.FC = () => {
                     {n} cột
                   </button>
                 ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      // ── Contact Page ────────────────────────────────────────────────────────
+      case 'contact':
+        return (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-gray-800">Thông tin Trang Liên Hệ</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
+                <input type="text" value={config.contactPage.address}
+                  onChange={e => updateConfig({ contactPage: { ...config.contactPage, address: e.target.value } })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Điện thoại</label>
+                <input type="text" value={config.contactPage.phone}
+                  onChange={e => updateConfig({ contactPage: { ...config.contactPage, phone: e.target.value } })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" value={config.contactPage.email}
+                  onChange={e => updateConfig({ contactPage: { ...config.contactPage, email: e.target.value } })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Giờ làm việc</label>
+                <input type="text" value={config.contactPage.workingHours}
+                  onChange={e => updateConfig({ contactPage: { ...config.contactPage, workingHours: e.target.value } })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Link Google Map (URL nhúng - src)</label>
+              <textarea value={config.contactPage.mapUrl}
+                onChange={e => updateConfig({ contactPage: { ...config.contactPage, mapUrl: e.target.value } })}
+                rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none" />
+              <p className="text-xs text-gray-500 mt-1">Lấy link src="..." từ mã nhúng iframe của Google Maps.</p>
+            </div>
+            <h4 className="font-semibold text-gray-800 mt-6 pt-4 border-t border-gray-100">Mạng Xã Hội</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Facebook</label>
+                <input type="url" value={config.contactPage.facebook}
+                  onChange={e => updateConfig({ contactPage: { ...config.contactPage, facebook: e.target.value } })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Instagram</label>
+                <input type="url" value={config.contactPage.instagram}
+                  onChange={e => updateConfig({ contactPage: { ...config.contactPage, instagram: e.target.value } })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Youtube</label>
+                <input type="url" value={config.contactPage.youtube}
+                  onChange={e => updateConfig({ contactPage: { ...config.contactPage, youtube: e.target.value } })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent" />
               </div>
             </div>
           </div>

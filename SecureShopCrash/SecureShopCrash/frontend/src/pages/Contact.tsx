@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import Footer from '../components/Footer';
 import Header from '../components/Header';
+import { useUIConfig } from '../stores/uiConfigStore';
 
 const Contact: React.FC = () => {
 
@@ -21,29 +22,32 @@ const Contact: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { config } = useUIConfig();
+  const contactConfig = config.contactPage;
+
   const contactInfo = [
     {
       icon: MapPin,
       title: 'Địa chỉ',
-      content: 'số 4 Nguyễn Văn Bảo, Quận Gò Vấp, TP.HCM',
-      link: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15677.67118362639!2d106.69748834771095!3d10.77885823150119!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752f38f9ed887b%3A0x14aded570933994a!2zQ2jhu6MgQuG6v24gVGjDoG5o!5e0!3m2!1svi!2s!4v1678888888888!5m2!1svi!2s'
+      content: contactConfig.address,
+      link: contactConfig.mapUrl
     },
     {
       icon: Phone,
       title: 'Điện thoại',
-      content: '0123 456 789',
-      link: 'tel:0123456789'
+      content: contactConfig.phone,
+      link: `tel:${contactConfig.phone.replace(/[^0-9+]/g, '')}`
     },
     {
       icon: Mail,
       title: 'Email',
-      content: 'hello@lumierebeauty.vn',
-      link: 'mailto:hello@lumierebeauty.vn'
+      content: contactConfig.email,
+      link: `mailto:${contactConfig.email}`
     },
     {
       icon: Clock,
       title: 'Giờ làm việc',
-      content: 'T2 - T7: 8:00 - 18:00',
+      content: contactConfig.workingHours,
       link: null
     }
   ];
@@ -303,7 +307,7 @@ const Contact: React.FC = () => {
             >
               <div className="bg-gray-100 rounded-lg overflow-hidden h-80 md:h-[400px]">
                 <iframe 
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3918.857610747833!2d106.69723331526601!3d10.82220546130835!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x317528e54e1837c7%3A0x203d789126e85848!2zVHLGsOG7nW5nIMSQ4bqhaSBo4buNYyBDw7RuZyBuZ2hp4buHcCBULSBDaGkgTmjDoW5oIFRwLkjDtSBDaMOtIE1pbmg!5e0!3m2!1svi!2s!4v1678888888888!5m2!1svi!2s" 
+                  src={contactConfig.mapUrl} 
                   loading="lazy" 
                   referrerPolicy="no-referrer-when-downgrade"
                   className="w-full h-full border-0"
@@ -320,7 +324,7 @@ const Contact: React.FC = () => {
                 </p>
                 <div className="flex gap-4">
                   <a
-                    href="https://facebook.com"
+                    href={contactConfig.facebook}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-12 h-12 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center transition-colors"
@@ -328,7 +332,7 @@ const Contact: React.FC = () => {
                     <Facebook className="h-6 w-6" />
                   </a>
                   <a
-                    href="https://instagram.com"
+                    href={contactConfig.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-12 h-12 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center transition-colors"
@@ -336,7 +340,7 @@ const Contact: React.FC = () => {
                     <Instagram className="h-6 w-6" />
                   </a>
                   <a
-                    href="https://youtube.com"
+                    href={contactConfig.youtube}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-12 h-12 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center transition-colors"
@@ -366,11 +370,11 @@ const Contact: React.FC = () => {
               Gọi điện cho chúng tôi để được tư vấn miễn phí ngay bây giờ
             </p>
             <a
-              href="tel:0123456789"
+              href={`tel:${contactConfig.phone.replace(/[^0-9+]/g, '')}`}
               className="inline-flex items-center gap-2 bg-white text-pink-500 px-8 py-3 rounded-lg font-semibold hover:bg-rose-50 transition-colors"
             >
               <Phone className="h-5 w-5" />
-              0123 456 789
+              {contactConfig.phone}
             </a>
           </motion.div>
         </div>

@@ -55,6 +55,16 @@ export interface UIConfig {
     pageSize: number;
     columnsPerRow: number;
   };
+  contactPage: {
+    address: string;
+    phone: string;
+    email: string;
+    workingHours: string;
+    mapUrl: string;
+    facebook: string;
+    instagram: string;
+    youtube: string;
+  };
 }
 
 // ─── Default Config ───────────────────────────────────────────────────────────
@@ -140,6 +150,16 @@ export const DEFAULT_CONFIG: UIConfig = {
     pageSize: 12,
     columnsPerRow: 3,
   },
+  contactPage: {
+    address: 'số 4 Nguyễn Văn Bảo, Quận Gò Vấp, TP.HCM',
+    phone: '0123 456 789',
+    email: 'hello@lumierebeauty.vn',
+    workingHours: 'T2 - T7: 8:00 - 18:00',
+    mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3918.857610747833!2d106.69723331526601!3d10.82220546130835!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x317528e54e1837c7%3A0x203d789126e85848!2zVHLGsOG7nW5nIMSQ4bqhaSBo4buNYyBDw7RuZyBuZ2hp4buHcCBULSBDaGkgTmjDoW5oIFRwLkjDtSBDaMOtIE1pbmg!5e0!3m2!1svi!2s!4v1678888888888!5m2!1svi!2s',
+    facebook: 'https://facebook.com',
+    instagram: 'https://instagram.com',
+    youtube: 'https://youtube.com',
+  },
 };
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -173,6 +193,7 @@ function loadFromStorage(): UIConfig {
       },
       homeSectionOrder: parsed.homeSectionOrder ?? DEFAULT_CONFIG.homeSectionOrder,
       productsPage: { ...DEFAULT_CONFIG.productsPage, ...parsed.productsPage },
+      contactPage: { ...DEFAULT_CONFIG.contactPage, ...parsed.contactPage },
       banners: parsed.banners ?? DEFAULT_CONFIG.banners,
     };
   } catch {
