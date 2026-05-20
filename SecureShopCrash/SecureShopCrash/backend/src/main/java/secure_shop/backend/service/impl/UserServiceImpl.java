@@ -129,6 +129,13 @@ public class UserServiceImpl implements UserService {
             String avatarUrl = request.getAvatarUrl().isBlank() ? null : request.getAvatarUrl().trim();
             user.setAvatarUrl(avatarUrl);
         }
+        if (request.getBirthday() != null) {
+            user.setBirthday(request.getBirthday());
+        }
+        if (request.getGender() != null) {
+            String gender = request.getGender().isBlank() ? null : request.getGender().trim();
+            user.setGender(gender);
+        }
 
         return userMapper.toDTO(userRepository.save(user));
     }

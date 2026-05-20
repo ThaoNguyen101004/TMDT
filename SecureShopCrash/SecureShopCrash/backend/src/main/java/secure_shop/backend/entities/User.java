@@ -6,6 +6,7 @@ import lombok.*;
 import secure_shop.backend.enums.Role;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -43,6 +44,11 @@ public class User extends BaseEntity {
     @Pattern(regexp = "^(\\+\\d{1,3}[- ]?)?\\d{9,15}$", message = "Số điện thoại không hợp lệ")
     @Column(length = 20)
     private String phone;
+
+    private LocalDate birthday;
+
+    @Column(length = 10)
+    private String gender;
 
     @Builder.Default
     @Column(nullable = false)

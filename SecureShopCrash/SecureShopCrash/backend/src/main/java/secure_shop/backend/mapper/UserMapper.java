@@ -19,6 +19,8 @@ public class UserMapper {
                 .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
                 .role(user.getRole().name())
+                .birthday(user.getBirthday())
+                .gender(user.getGender())
                 .build();
     }
 
@@ -51,6 +53,8 @@ public class UserMapper {
                 .deletedAt(user.getDeletedAt())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
+                .birthday(user.getBirthday())
+                .gender(user.getGender())
                 .build();
     }
 }

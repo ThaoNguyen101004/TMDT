@@ -1,6 +1,7 @@
 package secure_shop.backend.dto.user;
 
 import java.util.UUID;
+import java.time.LocalDate;
 
 public record UserProfileDTO(
         UUID id,
@@ -8,7 +9,9 @@ public record UserProfileDTO(
         String name,
         String phone,
         String avatarUrl,
-        String role
+        String role,
+        LocalDate birthday,
+        String gender
 ) {
     public static Builder builder() {
         return new Builder();
@@ -21,6 +24,8 @@ public record UserProfileDTO(
         private String phone;
         private String avatarUrl;
         private String role;
+        private LocalDate birthday;
+        private String gender;
 
         private Builder() {}
 
@@ -54,8 +59,18 @@ public record UserProfileDTO(
             return this;
         }
 
+        public Builder birthday(LocalDate birthday) {
+            this.birthday = birthday;
+            return this;
+        }
+
+        public Builder gender(String gender) {
+            this.gender = gender;
+            return this;
+        }
+
         public UserProfileDTO build() {
-            return new UserProfileDTO(id, email, name, phone, avatarUrl, role);
+            return new UserProfileDTO(id, email, name, phone, avatarUrl, role, birthday, gender);
         }
     }
 }

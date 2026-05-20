@@ -106,6 +106,8 @@ const Profile: React.FC = () => {
     phone: user?.phone || '',
     avatarUrl: user?.avatarUrl || '',
     is2faEnabled: user?.is2faEnabled || false,
+    birthday: user?.birthday || '',
+    gender: user?.gender || '',
   });
 
   useEffect(() => {
@@ -135,6 +137,8 @@ const Profile: React.FC = () => {
         phone: user.phone || '',
         avatarUrl: user.avatarUrl || '',
         is2faEnabled: user.is2faEnabled || false,
+        birthday: user.birthday || '',
+        gender: user.gender || '',
       });
     }
   }, [user]);
@@ -219,6 +223,8 @@ const Profile: React.FC = () => {
         name: formData.name.trim(),
         phone: formData.phone?.trim() || null,
         avatarUrl: formData.avatarUrl?.trim() || null,
+        birthday: formData.birthday || null,
+        gender: formData.gender || null,
       };
 
       await userApi.updateProfile(dataToUpdate);
@@ -511,6 +517,30 @@ const Profile: React.FC = () => {
                   type="tel"
                 />
                 <span className="text-xs text-gray-500 mt-1">VD: 0901234567 hoặc +84901234567</span>
+              </div>
+              <div className="flex flex-col">
+                <input 
+                  className="border p-2 rounded text-sm sm:text-base" 
+                  name="birthday"
+                  value={formData.birthday}
+                  onChange={handleInputChange}
+                  type="date" 
+                />
+                <span className="text-xs text-gray-500 mt-1">Ngày sinh</span>
+              </div>
+              <div className="flex flex-col">
+                <select 
+                  className="border p-2 rounded text-sm sm:text-base"
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Giới tính</option>
+                  <option value="Nam">Nam</option>
+                  <option value="Nữ">Nữ</option>
+                  <option value="Khác">Khác</option>
+                </select>
+                <span className="text-xs text-gray-500 mt-1">Giới tính</span>
               </div>
             </div>
             

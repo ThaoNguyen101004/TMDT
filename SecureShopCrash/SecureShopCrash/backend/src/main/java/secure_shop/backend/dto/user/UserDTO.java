@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Data
@@ -20,4 +21,6 @@ public class UserDTO {
     private Instant deletedAt;
     private Instant createdAt;
     private Instant updatedAt;
+    private LocalDate birthday;
+    private String gender;
 }

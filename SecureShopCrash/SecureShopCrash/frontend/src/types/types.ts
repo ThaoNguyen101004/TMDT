@@ -6,6 +6,8 @@ export interface User {
   role: string;
   avatarUrl?: string;
   is2faEnabled?: boolean;
+  birthday?: string;
+  gender?: string;
 }
 
 export interface UserSummary {
