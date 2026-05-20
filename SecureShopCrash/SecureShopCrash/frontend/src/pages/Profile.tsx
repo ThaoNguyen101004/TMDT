@@ -512,17 +512,6 @@ const Profile: React.FC = () => {
                 />
                 <span className="text-xs text-gray-500 mt-1">VD: 0901234567 hoặc +84901234567</span>
               </div>
-              <input 
-                className="border p-2 rounded text-sm sm:text-base" 
-                placeholder="Ngày sinh" 
-                type="date" 
-              />
-              <select className="border p-2 rounded text-sm sm:text-base">
-                <option>Giới tính</option>
-                <option>Nam</option>
-                <option>Nữ</option>
-                <option>Khác</option>
-              </select>
             </div>
             
 
