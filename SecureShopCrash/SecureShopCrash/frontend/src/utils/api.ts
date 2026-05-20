@@ -248,6 +248,11 @@ export const userApi = {
     const response = await api.delete(`/users/${id}`);
     return response.data;
   },
+  // Admin: Cập nhật vai trò user
+  updateUserRole: async (id: string, role: string) => {
+    const response = await api.put(`/users/admin/${id}/role`, { role });
+    return response.data;
+  },
 };
 
 

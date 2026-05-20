@@ -114,4 +114,21 @@ public class UserController {
         service.disableUser(id);
         return ResponseEntity.ok(Map.of("message", "User disabled"));
     }
+
+    @PutMapping("/admin/{id}/role")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateRole(@PathVariable UUID id, @RequestBody Map<String, String> body) {
+        String roleStr = body.get("role");
+        if (roleStr == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Role is required"));
+        }
+        Role role;
+        try {
+            role = Role.valueOf(roleStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Invalid role: " + roleStr));
+        }
+        service.updateRole(id, role);
+        return ResponseEntity.ok(Map.of("message", "Role updated successfully"));
+    }
 }

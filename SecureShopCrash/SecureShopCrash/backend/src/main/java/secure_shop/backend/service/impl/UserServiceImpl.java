@@ -21,6 +21,7 @@ import secure_shop.backend.service.UserService;
 import secure_shop.backend.specification.UserSpecification;
 import secure_shop.backend.dto.auth.RegisterRequest;
 
+import secure_shop.backend.exception.BadRequestException;
 import secure_shop.backend.exception.BusinessRuleViolationException;
 import secure_shop.backend.exception.ConflictException;
 import secure_shop.backend.exception.ResourceNotFoundException;
@@ -305,28 +306,41 @@ public class UserServiceImpl implements UserService {
     @Override
     public User registerUser(RegisterRequest request) {
         // 1. Kiểm tra xem email đã tồn tại chưa
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new ConflictException("Email này đã được sử dụng.");
+        Optional<User> existingUserOpt = userRepository.findByEmail(request.getEmail());
+        User userToSave;
+
+        if (existingUserOpt.isPresent()) {
+            User existingUser = existingUserOpt.get();
+            if (existingUser.getEnabled()) {
+                throw new ConflictException("Email này đã được sử dụng.");
+            } else {
+                // Nếu tài khoản đã được đăng ký nhưng CHƯA kích hoạt (enabled = false),
+                // ta cho phép cập nhật thông tin mới (họ tên, sđt, mật khẩu mới) để đăng ký lại.
+                existingUser.setName(request.getName());
+                existingUser.setPhone(request.getPhone());
+                existingUser.setPasswordHash(encoder.encode(request.getPassword()));
+                userToSave = existingUser;
+            }
+        } else {
+            // Hash mật khẩu
+            String hashedPassword = encoder.encode(request.getPassword());
+
+            // Tạo đối tượng User mới
+            userToSave = User.builder()
+                    .email(request.getEmail())
+                    .passwordHash(hashedPassword)
+                    .name(request.getName())
+                    .phone(request.getPhone())
+                    .provider("local")
+                    .enabled(false) // Chưa kích hoạt
+                    .role(Role.USER)
+                    .build();
         }
 
-        // 2. Hash mật khẩu
-        String hashedPassword = encoder.encode(request.getPassword());
+        // 2. Lưu vào database
+        User savedUser = userRepository.save(userToSave);
 
-        // 3. Tạo đối tượng User mới
-        User newUser = User.builder()
-                .email(request.getEmail())
-                .passwordHash(hashedPassword)
-                .name(request.getName())
-                .phone(request.getPhone())
-                .provider("local")
-                .enabled(false) // ⚠️ THAY ĐỔI: Chưa kích hoạt, cần xác thực email
-                .role(Role.USER)
-                .build();
-
-        // 4. Lưu vào database
-        User savedUser = userRepository.save(newUser);
-
-        // 5. Gửi mã OTP xác thực qua email thay vì link
+        // 3. Gửi mã OTP xác thực qua email
         if (savedUser != null) {
             String tempToken = otpService.generateOtp(savedUser.getId(), savedUser.getEmail());
             String otp = otpService.getOtp(tempToken);
@@ -334,9 +348,25 @@ public class UserServiceImpl implements UserService {
                 emailService.sendOtpEmail(savedUser.getEmail(), otp);
             } catch (Exception e) {
                 log.error("Failed to send OTP email to: " + savedUser.getEmail(), e);
+                // Ném ngoại lệ BadRequestException để rollback và báo lỗi rõ ràng
+                throw new BadRequestException("Không thể gửi mã xác thực tới email. Vui lòng kiểm tra lại cấu hình SMTP: " + e.getMessage());
             }
         }
 
         return savedUser;
+    }
+
+    @Override
+    @Transactional
+    public void updateRole(UUID userId, Role role) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+
+        if (user.getDeletedAt() != null) {
+            throw new BusinessRuleViolationException("Cannot change role of a deleted user.");
+        }
+
+        user.setRole(role);
+        userRepository.save(user);
     }
 }

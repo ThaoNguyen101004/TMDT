@@ -28,6 +28,8 @@ public class ComboServiceImpl implements ComboService {
     private final ComboRepository comboRepository;
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
+    private final secure_shop.backend.repositories.UserRepository userRepository;
+    private final secure_shop.backend.service.EmailService emailService;
 
     @Override
     @Transactional
@@ -55,6 +57,14 @@ public class ComboServiceImpl implements ComboService {
 
         combo.setItems(items);
         Combo saved = comboRepository.save(combo);
+        if (saved.isActive()) {
+            try {
+                java.util.List<secure_shop.backend.entities.User> customers = userRepository.findByEnabledTrueAndRoleAndDeletedAtIsNull(secure_shop.backend.enums.Role.USER);
+                emailService.sendNewComboAlert(saved, customers);
+            } catch (Exception e) {
+                // Prevent transaction rollback if email sending fails
+            }
+        }
         return mapToDTO(saved);
     }
 
@@ -63,6 +73,8 @@ public class ComboServiceImpl implements ComboService {
     public ComboDTO updateCombo(UUID id, ComboCreateRequest request) {
         Combo combo = comboRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Combo", id));
+
+        boolean wasActive = combo.isActive();
 
         combo.setName(request.getName());
         combo.setDescription(request.getDescription());
@@ -87,6 +99,14 @@ public class ComboServiceImpl implements ComboService {
         
         combo.getItems().addAll(newItems);
         Combo saved = comboRepository.save(combo);
+        if (saved.isActive() && !wasActive) {
+            try {
+                java.util.List<secure_shop.backend.entities.User> customers = userRepository.findByEnabledTrueAndRoleAndDeletedAtIsNull(secure_shop.backend.enums.Role.USER);
+                emailService.sendNewComboAlert(saved, customers);
+            } catch (Exception e) {
+                // Prevent transaction rollback if email sending fails
+            }
+        }
         return mapToDTO(saved);
     }
 
@@ -105,6 +125,14 @@ public class ComboServiceImpl implements ComboService {
                 .orElseThrow(() -> new ResourceNotFoundException("Combo", id));
         combo.setActive(!combo.isActive());
         Combo saved = comboRepository.save(combo);
+        if (saved.isActive()) {
+            try {
+                java.util.List<secure_shop.backend.entities.User> customers = userRepository.findByEnabledTrueAndRoleAndDeletedAtIsNull(secure_shop.backend.enums.Role.USER);
+                emailService.sendNewComboAlert(saved, customers);
+            } catch (Exception e) {
+                // Prevent transaction rollback if email sending fails
+            }
+        }
         return mapToDTO(saved);
     }
 

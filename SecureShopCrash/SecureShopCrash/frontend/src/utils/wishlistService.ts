@@ -18,18 +18,38 @@ export interface WishlistItem {
   brand?: ProductSummary["brand"];
 }
 
-function readStorage(): WishlistItem[] {
+function getUserId(): string | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const userRaw = localStorage.getItem("user");
+    if (!userRaw) return null;
+    const user = JSON.parse(userRaw);
+    return user.id || user.email || "default";
+  } catch {
+    return null;
+  }
+}
+
+function getStorageKey(): string | null {
+  const userId = getUserId();
+  return userId ? `wishlist_${userId}` : null;
+}
+
+function readStorage(): WishlistItem[] {
+  const key = getStorageKey();
+  if (!key) return [];
+  try {
+    const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as WishlistItem[]) : [];
   } catch {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(key);
     return [];
   }
 }
 
 function writeStorage(items: WishlistItem[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  const key = getStorageKey();
+  if (!key) return;
+  localStorage.setItem(key, JSON.stringify(items));
   window.dispatchEvent(new Event("wishlistUpdated"));
 }
 
@@ -88,6 +108,11 @@ class WishlistService {
   }
 
   add(product: ProductSummary | ProductDetail): boolean {
+    const key = getStorageKey();
+    if (!key) {
+      toast.warning("Vui lòng đăng nhập để thêm sản phẩm vào danh sách yêu thích.");
+      return false;
+    }
     const items = readStorage();
     if (items.some((item) => item.id === product.id)) {
       return false;
@@ -99,6 +124,8 @@ class WishlistService {
   }
 
   remove(productId: string): boolean {
+    const key = getStorageKey();
+    if (!key) return false;
     const items = readStorage().filter((item) => item.id !== productId);
     const removed = items.length !== readStorage().length;
     if (removed) {
@@ -109,6 +136,11 @@ class WishlistService {
   }
 
   toggle(product: ProductSummary | ProductDetail): boolean {
+    const key = getStorageKey();
+    if (!key) {
+      toast.warning("Vui lòng đăng nhập để thêm sản phẩm vào danh sách yêu thích.");
+      return false;
+    }
     if (this.isInWishlist(product.id)) {
       this.remove(product.id);
       return false;
@@ -118,6 +150,8 @@ class WishlistService {
   }
 
   clear(): void {
+    const key = getStorageKey();
+    if (!key) return;
     writeStorage([]);
     toast.info("Đã xóa toàn bộ sản phẩm yêu thích");
   }

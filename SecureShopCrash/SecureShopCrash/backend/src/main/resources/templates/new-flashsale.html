@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>⚡ Siêu Ưu Đãi Chớp Nhoáng: Flash Sale - SecureShop</title>
+</head>
+<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #1f2937; background-color: #fffafb; margin: 0; padding: 0;">
+<div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(239, 68, 68, 0.08); border: 1px solid #ffe4e6;">
+    
+    <!-- Header Banner -->
+    <div style="background: linear-gradient(135deg, #ef4444 0%, #f43f5e 100%); padding: 30px; text-align: center;">
+        <span style="background-color: rgba(255, 255, 255, 0.25); color: #ffffff; font-size: 11px; font-weight: bold; letter-spacing: 2px; padding: 4px 12px; border-radius: 9999px; text-transform: uppercase;">⚡ FLASH SALE CỰC HẠN</span>
+        <h1 style="color: #ffffff; font-size: 26px; font-weight: 900; margin: 12px 0 0 0; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">LUMIÈRE BEAUTY</h1>
+    </div>
+
+    <!-- Main Content -->
+    <div style="padding: 30px;">
+        <p style="font-size: 16px; margin-top: 0;">Xin chào <strong><span th:text="${customerName}">Bạn yêu</span></strong>,</p>
+        <p style="font-size: 15px; color: #4b5563;">Cơ hội mua sắm siêu hời đã đến! Một sản phẩm được yêu thích hàng đầu tại cửa hàng vừa được kích hoạt chế độ **Flash Sale chớp nhoáng** với mức giảm giá cực sâu:</p>
+
+        <!-- Product Card -->
+        <div style="background-color: #fff5f5; border-radius: 12px; border: 1px solid #fee2e2; padding: 20px; margin: 25px 0;">
+            <div style="text-align: center;">
+                <div th:if="${productThumbnail != null}" style="margin-bottom: 15px;">
+                    <img th:src="${productThumbnail}" src="https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=300&h=200&fit=crop" alt="Product Image" style="max-width: 100%; height: 160px; object-fit: cover; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);" />
+                </div>
+                
+                <h3 style="color: #dc2626; font-size: 20px; font-weight: 800; margin: 5px 0 8px 0;" th:text="${productName}">Tên sản phẩm giảm giá</h3>
+                <p style="font-size: 14px; color: #6b7280; margin: 0 0 15px 0;" th:text="${productDesc}">Mô tả ngắn gọn sản phẩm mỹ phẩm xinh xắn được giảm giá.</p>
+                
+                <div style="background-color: #ffffff; display: inline-block; padding: 12px 25px; border-radius: 8px; border: 1px solid #fee2e2; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+                    <span th:if="${discountPct != null}" style="background-color: #dc2626; color: #ffffff; font-size: 12px; font-weight: bold; padding: 3px 8px; border-radius: 4px; vertical-align: middle; margin-right: 10px;" th:text="${discountPct}">-30%</span>
+                    <span style="font-size: 22px; font-weight: 900; color: #e11d48; vertical-align: middle;" th:text="${salePrice}">199.000 ₫</span>
+                    <span style="font-size: 14px; color: #9ca3af; text-decoration: line-through; margin-left: 8px; vertical-align: middle;" th:text="${originalPrice}">299.000 ₫</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a th:href="${detailLink}" href="#" style="background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%); color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 700; padding: 14px 35px; border-radius: 9999px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); display: inline-block; transition: all 0.2s;">Săn Flash Sale Ngay</a>
+        </div>
+
+        <p style="font-size: 13px; color: #ef4444; text-align: center; font-weight: 600; margin-bottom: 0;">⚠️ Lưu ý: Ưu đãi Flash Sale chỉ áp dụng trong vòng vài giờ hoặc khi sản phẩm được bán hết. Số lượng trong kho có hạn, hãy nhanh tay đặt mua ngay!</p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background-color: #fafafa; border-top: 1px solid #f3f4f6; padding: 20px; text-align: center;">
+        <p style="font-size: 12px; color: #9ca3af; margin: 0 0 5px 0;">Email này được gửi tự động bởi hệ thống cửa hàng Lumière Beauty.</p>
+        <p style="font-size: 12px; color: #f43f5e; font-weight: 600; margin: 0;">© 2026 Lumière Beauty - SecureShop. All Rights Reserved.</p>
+    </div>
+</div>
+</body>
+</html>

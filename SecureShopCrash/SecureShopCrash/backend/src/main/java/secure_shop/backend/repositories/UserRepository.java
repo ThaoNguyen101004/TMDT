@@ -15,6 +15,7 @@ import java.util.UUID;
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificationExecutor<User> {
     Optional<User> findByEmail(String email);
+    java.util.List<User> findByEnabledTrueAndRoleAndDeletedAtIsNull(Role role);
 
     long countByDeletedAtIsNull();
     long countByDeletedAtIsNotNull();

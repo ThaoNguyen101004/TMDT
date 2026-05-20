@@ -14,6 +14,7 @@ import secure_shop.backend.entities.Order;
 import secure_shop.backend.entities.OrderItem;
 import secure_shop.backend.enums.PaymentStatus;
 import secure_shop.backend.service.EmailService;
+import org.springframework.scheduling.annotation.Async;
  
 
 import java.io.IOException;
@@ -159,6 +160,101 @@ public class EmailServiceImpl implements EmailService {
         helper.setText(htmlContent, true);
 
         mailSender.send(message);
+    }
+
+    @Override
+    @Async
+    public void sendNewComboAlert(secure_shop.backend.entities.Combo combo, java.util.List<secure_shop.backend.entities.User> customers) {
+        if (combo == null || customers == null || customers.isEmpty()) {
+            return;
+        }
+
+        log.info("Starting async email blast for new Combo: {} to {} customers", combo.getName(), customers.size());
+
+        for (secure_shop.backend.entities.User customer : customers) {
+            if (customer.getEmail() == null || customer.getEmail().isBlank()) continue;
+
+            try {
+                Context context = new Context(new Locale("vi", "VN"));
+                context.setVariable("customerName", customer.getName());
+                context.setVariable("comboName", combo.getName());
+                context.setVariable("comboDescription", combo.getDescription());
+                context.setVariable("comboThumbnail", combo.getThumbnailUrl());
+                
+                NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+                context.setVariable("comboPrice", combo.getFixedPrice() != null ? formatCurrency(combo.getFixedPrice(), currencyFormat) : "N/A");
+                context.setVariable("discountPercent", combo.getDiscountPercent() != null ? combo.getDiscountPercent() + "%" : null);
+
+                String detailLink = frontendBaseUrl.replaceAll("/$", "") + "/combos/" + combo.getId();
+                context.setVariable("detailLink", detailLink);
+
+                String htmlContent = templateEngine.process("new-combo", context);
+
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+                helper.setFrom("support@myshop.com");
+                helper.setTo(customer.getEmail());
+                helper.setSubject("🎁 Bộ Combo Mới Cực Hot: " + combo.getName() + " - SecureShop");
+                helper.setText(htmlContent, true);
+
+                mailSender.send(message);
+                log.debug("Sent combo alert email to: {}", customer.getEmail());
+            } catch (Exception ex) {
+                log.error("Failed to send combo alert email to: {}", customer.getEmail(), ex);
+            }
+        }
+        log.info("Finished async email blast for Combo: {}", combo.getName());
+    }
+
+    @Override
+    @Async
+    public void sendFlashSaleAlert(secure_shop.backend.entities.Product product, java.util.List<secure_shop.backend.entities.User> customers) {
+        if (product == null || customers == null || customers.isEmpty()) {
+            return;
+        }
+
+        log.info("Starting async email blast for Flash Sale Product: {} to {} customers", product.getName(), customers.size());
+
+        for (secure_shop.backend.entities.User customer : customers) {
+            if (customer.getEmail() == null || customer.getEmail().isBlank()) continue;
+
+            try {
+                Context context = new Context(new Locale("vi", "VN"));
+                context.setVariable("customerName", customer.getName());
+                context.setVariable("productName", product.getName());
+                context.setVariable("productDesc", product.getShortDesc());
+                context.setVariable("productThumbnail", product.getThumbnailUrl());
+                
+                NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+                context.setVariable("salePrice", product.getPrice() != null ? formatCurrency(product.getPrice(), currencyFormat) : "N/A");
+                context.setVariable("originalPrice", product.getListedPrice() != null ? formatCurrency(product.getListedPrice(), currencyFormat) : "N/A");
+
+                int discountPct = 0;
+                if (product.getListedPrice() != null && product.getListedPrice().compareTo(BigDecimal.ZERO) > 0 && product.getPrice() != null) {
+                    BigDecimal diff = product.getListedPrice().subtract(product.getPrice());
+                    discountPct = diff.multiply(BigDecimal.valueOf(100)).divide(product.getListedPrice(), 0, java.math.RoundingMode.HALF_UP).intValue();
+                }
+                context.setVariable("discountPct", discountPct > 0 ? "-" + discountPct + "%" : null);
+
+                String detailLink = frontendBaseUrl.replaceAll("/$", "") + "/products/" + product.getId();
+                context.setVariable("detailLink", detailLink);
+
+                String htmlContent = templateEngine.process("new-flashsale", context);
+
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+                helper.setFrom("support@myshop.com");
+                helper.setTo(customer.getEmail());
+                helper.setSubject("⚡ Ưu đãi chớp nhoáng: " + product.getName() + " giảm đến " + discountPct + "%! - SecureShop");
+                helper.setText(htmlContent, true);
+
+                mailSender.send(message);
+                log.debug("Sent flash sale email to: {}", customer.getEmail());
+            } catch (Exception ex) {
+                log.error("Failed to send flash sale email to: {}", customer.getEmail(), ex);
+            }
+        }
+        log.info("Finished async email blast for Flash Sale Product: {}", product.getName());
     }
 
     private String formatCurrency(BigDecimal value, NumberFormat nf) {

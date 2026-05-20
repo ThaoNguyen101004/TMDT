@@ -43,5 +43,5 @@ public interface UserService {
 
     User registerUser(RegisterRequest request);
 
-
+    void updateRole(UUID id, Role role);
 }

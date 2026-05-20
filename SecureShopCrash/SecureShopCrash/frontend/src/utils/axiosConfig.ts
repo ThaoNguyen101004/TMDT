@@ -72,12 +72,22 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    const isPublicAuthEndpoint = 
+      originalRequest.url?.includes("/auth/login") ||
+      originalRequest.url?.includes("/auth/register") ||
+      originalRequest.url?.includes("/auth/verify-registration") ||
+      originalRequest.url?.includes("/auth/verify-email") ||
+      originalRequest.url?.includes("/auth/resend-verification") ||
+      originalRequest.url?.includes("/auth/forgot-password") ||
+      originalRequest.url?.includes("/auth/verify-token") ||
+      originalRequest.url?.includes("/auth/reset-password");
+
     // Handle 401 errors (Unauthorized)
     if (
       error.response?.status === 401 &&
       !originalRequest[RETRY_FLAG] &&
       !originalRequest.url?.includes("/auth/refresh") &&
-      !originalRequest.url?.includes("/auth/login")
+      !isPublicAuthEndpoint
     ) {
       originalRequest[RETRY_FLAG] = true;
 
@@ -131,8 +141,8 @@ api.interceptors.response.use(
         localStorage.removeItem("accessToken");
         localStorage.removeItem("tokenExpiresAt");
 
-        // Don't redirect if already on login page
-        if (!window.location.pathname.includes("/login")) {
+        // Don't redirect if already on login or register page
+        if (!window.location.pathname.includes("/login") && !window.location.pathname.includes("/register")) {
           toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
           setTimeout(() => {
             window.location.href = "/login";
@@ -150,8 +160,7 @@ api.interceptors.response.use(
       // Don't show toast for 401 on login/auth endpoints (handled by component)
       if (
         response?.status === 401 &&
-        (originalRequest.url?.includes("/auth/login") ||
-          originalRequest.url?.includes("/auth/refresh"))
+        (isPublicAuthEndpoint || originalRequest.url?.includes("/auth/refresh"))
       ) {
         return Promise.reject(error);
       }

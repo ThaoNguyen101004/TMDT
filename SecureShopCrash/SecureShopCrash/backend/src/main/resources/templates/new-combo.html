@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>🎁 Bộ Combo Mới Cực Hot - SecureShop</title>
+</head>
+<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #1f2937; background-color: #faf5ff; margin: 0; padding: 0;">
+<div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(109, 40, 217, 0.08); border: 1px solid #f3e8ff;">
+    
+    <!-- Header Banner -->
+    <div style="background: linear-gradient(135deg, #d946ef 0%, #a855f7 100%); padding: 30px; text-align: center;">
+        <span style="background-color: rgba(255, 255, 255, 0.2); color: #ffffff; font-size: 11px; font-weight: bold; letter-spacing: 2px; padding: 4px 12px; border-radius: 9999px; text-transform: uppercase;">Bộ Combo Mới Siêu Hời</span>
+        <h1 style="color: #ffffff; font-size: 26px; font-weight: 800; margin: 12px 0 0 0; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">LUMIÈRE BEAUTY</h1>
+    </div>
+
+    <!-- Main Content -->
+    <div style="padding: 30px;">
+        <p style="font-size: 16px; margin-top: 0;">Xin chào <strong><span th:text="${customerName}">Khách hàng</span></strong>,</p>
+        <p style="font-size: 15px; color: #4b5563;">Lumière Beauty vừa ra mắt một gói sản phẩm (Combo) chăm sóc sắc đẹp cực kỳ sang xịn với mức giá vô cùng ưu đãi dành riêng cho bạn:</p>
+
+        <!-- Combo Card -->
+        <div style="background-color: #fdf4ff; border-radius: 12px; border: 1px dashed #d946ef; padding: 20px; margin: 25px 0; text-align: center;">
+            <div th:if="${comboThumbnail != null}" style="margin-bottom: 15px;">
+                <img th:src="${comboThumbnail}" src="https://images.unsplash.com/photo-1596462502278-af242a95b598?w=300&h=200&fit=crop" alt="Combo Image" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);" />
+            </div>
+            
+            <h3 style="color: #8b5cf6; font-size: 20px; font-weight: 700; margin: 5px 0 10px 0;" th:text="${comboName}">Tên Combo Siêu Cấp</h3>
+            <p style="font-size: 14px; color: #6b7280; margin: 0 0 15px 0;" th:text="${comboDescription}">Mô tả ngắn gọn về combo sản phẩm này và những lợi ích tuyệt vời.</p>
+
+            <div style="display: inline-block; background-color: #ffffff; padding: 12px 25px; border-radius: 8px; border: 1px solid #f3e8ff; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+                <span th:if="${discountPercent != null}" style="background-color: #f43f5e; color: #ffffff; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 4px; vertical-align: middle; margin-right: 8px;" th:text="${discountPercent}">-20%</span>
+                <span style="font-size: 22px; font-weight: 900; color: #ec4899; vertical-align: middle;" th:text="${comboPrice}">499.000 ₫</span>
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a th:href="${detailLink}" href="#" style="background: linear-gradient(135deg, #a855f7 0%, #db2777 100%); color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 700; padding: 14px 35px; border-radius: 9999px; box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3); display: inline-block; transition: all 0.2s;">Săn Combo Ngay</a>
+        </div>
+
+        <p style="font-size: 14px; color: #9ca3af; text-align: center; margin-bottom: 0;">Ưu đãi có thể kết thúc sớm tùy theo số lượng combo có sẵn. Nhanh tay săn ngay để nhận trọn gói chăm sóc da hoàn hảo nhé!</p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background-color: #fafafa; border-top: 1px solid #f3f4f6; padding: 20px; text-align: center;">
+        <p style="font-size: 12px; color: #9ca3af; margin: 0 0 5px 0;">Email này được gửi tự động bởi hệ thống cửa hàng Lumière Beauty.</p>
+        <p style="font-size: 12px; color: #a855f7; font-weight: 600; margin: 0;">© 2026 Lumière Beauty - SecureShop. All Rights Reserved.</p>
+    </div>
+</div>
+</body>
+</html>

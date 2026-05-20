@@ -52,7 +52,7 @@ public class User extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String avatarUrl;
 
-    @Pattern(regexp = "local|google|facebook", message = "Provider không hợp lệ")
+    @Pattern(regexp = "(?i)local|google|facebook", message = "Provider không hợp lệ")
     @Column(length = 50)
     @Builder.Default
     private String provider = "local";

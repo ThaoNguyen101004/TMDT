@@ -26,3 +26,7 @@ SecureShopCrash/__MACOSX/
 .DS_Store
 node_modules/
 SecureShopCrash/frontend/node_modules/
+.vercel
+*.xlsx
+uploads/
+/uploads/

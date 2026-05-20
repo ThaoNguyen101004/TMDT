@@ -40,6 +40,8 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductMapper productMapper;
     private final InventoryRepository inventoryRepository;
+    private final secure_shop.backend.repositories.UserRepository userRepository;
+    private final secure_shop.backend.service.EmailService emailService;
     @Override
     public Page<ProductSummaryDTO> filterProducts(Boolean active,
                                                   Long categoryId,
@@ -126,6 +128,19 @@ public class ProductServiceImpl implements ProductService {
                     .collect(Collectors.toList());
             product.setMediaAssets(mediaAssets);
         }
+
+        // Trigger Flash Sale Alert email if product is active and has discount
+        if (saved.getActive() && saved.getListedPrice() != null && saved.getPrice() != null 
+                && saved.getListedPrice().compareTo(BigDecimal.ZERO) > 0 
+                && saved.getPrice().compareTo(saved.getListedPrice()) < 0) {
+            try {
+                java.util.List<secure_shop.backend.entities.User> customers = userRepository.findByEnabledTrueAndRoleAndDeletedAtIsNull(secure_shop.backend.enums.Role.USER);
+                emailService.sendFlashSaleAlert(saved, customers);
+            } catch (Exception e) {
+                // Prevent transaction rollback if email sending fails
+            }
+        }
+
         return productMapper.toProductDTO(saved);
     }
 
@@ -139,6 +154,12 @@ public class ProductServiceImpl implements ProductService {
         if (existing.getDeletedAt() != null) {
             throw new IllegalStateException("Cannot update a deleted product");
         }
+
+        boolean wasFlashSale = existing.getActive() 
+                && existing.getListedPrice() != null 
+                && existing.getPrice() != null 
+                && existing.getListedPrice().compareTo(BigDecimal.ZERO) > 0 
+                && existing.getPrice().compareTo(existing.getListedPrice()) < 0;
 
         existing.setSku(dto.getSku());
         existing.setName(dto.getName());
@@ -176,6 +197,22 @@ public class ProductServiceImpl implements ProductService {
         syncMediaAssets(existing, dto);
 
         var updated = productRepository.save(existing);
+
+        boolean isFlashSale = updated.getActive() 
+                && updated.getListedPrice() != null 
+                && updated.getPrice() != null 
+                && updated.getListedPrice().compareTo(BigDecimal.ZERO) > 0 
+                && updated.getPrice().compareTo(updated.getListedPrice()) < 0;
+
+        if (isFlashSale && !wasFlashSale) {
+            try {
+                java.util.List<secure_shop.backend.entities.User> customers = userRepository.findByEnabledTrueAndRoleAndDeletedAtIsNull(secure_shop.backend.enums.Role.USER);
+                emailService.sendFlashSaleAlert(updated, customers);
+            } catch (Exception e) {
+                // Prevent transaction rollback if email sending fails
+            }
+        }
+
         return productMapper.toProductDTO(updated);
     }
 

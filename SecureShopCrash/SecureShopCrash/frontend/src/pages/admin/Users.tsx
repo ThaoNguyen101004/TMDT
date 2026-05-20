@@ -76,6 +76,16 @@ const Users: React.FC<Props> = ({ data, onReload }) => {
     }
   };
 
+  const handleRoleChange = async (user: UserSummary, newRole: string) => {
+    try {
+      await userApi.updateUserRole(user.id, newRole);
+      toast.success(`Đã cập nhật vai trò của ${user.name} thành ${newRole}`);
+      onReload?.();
+    } catch {
+      toast.error('Có lỗi xảy ra khi thay đổi vai trò tài khoản');
+    }
+  };
+
   const handleDeleteUser = (user: UserSummary) => {
     setConfirmDialog({ open: true, user });
   };
@@ -188,11 +198,27 @@ const Users: React.FC<Props> = ({ data, onReload }) => {
                   <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{user.phone || 'N/A'}</td>
                   <td className="px-6 py-4 text-sm">
-                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
-                      user.role === 'Admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      user.role?.toUpperCase() === 'ADMIN'
+                        ? 'bg-purple-100 text-purple-800'
+                        : 'bg-zinc-100 text-zinc-800'
                     }`}>
-                      {user.role === 'Admin' ? <Shield className="w-3 h-3" /> : <UserIcon className="w-3 h-3" />}
-                      {user.role}
+                      {user.role?.toUpperCase() === 'ADMIN' ? <Shield className="w-3.5 h-3.5 text-purple-600" /> : <UserIcon className="w-3.5 h-3.5 text-zinc-500" />}
+                      <select
+                        value={user.role?.toUpperCase() === 'ADMIN' ? 'Admin' : 'User'}
+                        onChange={(e) => handleRoleChange(user, e.target.value)}
+                        className="bg-transparent border-0 p-0 pr-4 font-semibold text-xs cursor-pointer focus:ring-0 focus:outline-none outline-none appearance-none"
+                        style={{
+                          backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`,
+                          backgroundPosition: 'right center',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundSize: '1.25em 1.25em',
+                          paddingRight: '1.25rem'
+                        }}
+                      >
+                        <option value="User" className="bg-white text-zinc-800 font-normal">USER</option>
+                        <option value="Admin" className="bg-white text-purple-800 font-normal">ADMIN</option>
+                      </select>
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm">
@@ -305,11 +331,34 @@ const Users: React.FC<Props> = ({ data, onReload }) => {
                     
                     <div className="flex justify-between items-center py-2 border-b border-gray-100">
                       <span className="text-sm font-medium text-gray-600">Vai trò:</span>
-                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
-                        userDetailModal.user.role === 'Admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        userDetailModal.user.role?.toUpperCase() === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-zinc-100 text-zinc-800'
                       }`}>
-                        {userDetailModal.user.role === 'Admin' ? <Shield className="w-3 h-3" /> : <UserIcon className="w-3 h-3" />}
-                        {userDetailModal.user.role}
+                        {userDetailModal.user.role?.toUpperCase() === 'ADMIN' ? <Shield className="w-3.5 h-3.5 text-purple-600" /> : <UserIcon className="w-3.5 h-3.5 text-zinc-500" />}
+                        <select
+                          value={userDetailModal.user.role?.toUpperCase() === 'ADMIN' ? 'Admin' : 'User'}
+                          onChange={async (e) => {
+                            if (userDetailModal.user) {
+                              const newRole = e.target.value;
+                              await handleRoleChange(userDetailModal.user, newRole);
+                              setUserDetailModal(prev => prev.user ? {
+                                ...prev,
+                                user: { ...prev.user, role: newRole }
+                              } : prev);
+                            }
+                          }}
+                          className="bg-transparent border-0 p-0 pr-4 font-semibold text-xs cursor-pointer focus:ring-0 focus:outline-none outline-none appearance-none"
+                          style={{
+                            backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`,
+                            backgroundPosition: 'right center',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundSize: '1.25em 1.25em',
+                            paddingRight: '1.25rem'
+                          }}
+                        >
+                          <option value="User" className="bg-white text-zinc-800 font-normal">USER</option>
+                          <option value="Admin" className="bg-white text-purple-800 font-normal">ADMIN</option>
+                        </select>
                       </span>
                     </div>
                     
