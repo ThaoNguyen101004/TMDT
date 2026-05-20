@@ -11,8 +11,16 @@ const client = new Client({
 
 async function main() {
   await client.connect();
-  const res = await client.query('SELECT id, name, image_url FROM public.categories');
-  console.log('Categories data:', res.rows);
+  
+  // Enable admin@lumierebeauty.vn and set role to ADMIN
+  const res = await client.query(`
+    UPDATE public.users 
+    SET enabled = true, role = 'ADMIN', provider = 'local' 
+    WHERE email = 'admin@lumierebeauty.vn' 
+    RETURNING id, email, enabled, role, provider
+  `);
+  
+  console.log("Updated users:", res.rows);
   await client.end();
 }
 

@@ -11,8 +11,8 @@ const client = new Client({
 
 async function main() {
   await client.connect();
-  const res = await client.query('SELECT id, name, image_url FROM public.categories');
-  console.log('Categories data:', res.rows);
+  const res = await client.query('SELECT id, email, password_hash, provider, role, enabled FROM public.users');
+  console.log(JSON.stringify(res.rows, null, 2));
   await client.end();
 }
 

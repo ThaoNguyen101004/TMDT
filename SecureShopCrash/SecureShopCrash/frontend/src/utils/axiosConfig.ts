@@ -67,8 +67,44 @@ api.interceptors.request.use(
 // === RESPONSE INTERCEPTOR ===
 const RETRY_FLAG = "_axiosRetry";
 
+function rewriteUrls(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === "string") {
+    const match = obj.match(/^(?:https?:\/\/[^\/]+)?(\/api\/files\/.*)$/);
+    if (match) {
+      const path = match[1];
+      const apiOrigin = API_URL.replace(/\/api\/?$/, "");
+      return `${apiOrigin}${path}`;
+    }
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(item => rewriteUrls(item));
+  }
+  if (typeof obj === "object") {
+    const newObj: any = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        newObj[key] = rewriteUrls(obj[key]);
+      }
+    }
+    return newObj;
+  }
+  return obj;
+}
+
+const urlRewriter = (response: any) => {
+  if (response && response.data) {
+    response.data = rewriteUrls(response.data);
+  }
+  return response;
+};
+
+publicApi.interceptors.response.use(urlRewriter, (error) => Promise.reject(error));
+
+
 api.interceptors.response.use(
-  (response) => response,
+  urlRewriter,
   async (error) => {
     const originalRequest = error.config;
 

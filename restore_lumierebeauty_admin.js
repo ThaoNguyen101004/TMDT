@@ -11,8 +11,16 @@ const client = new Client({
 
 async function main() {
   await client.connect();
-  const res = await client.query('SELECT id, name, image_url FROM public.categories');
-  console.log('Categories data:', res.rows);
+  
+  // Set deleted_at = NULL for admin@lumierebeauty.vn
+  const res = await client.query(`
+    UPDATE public.users 
+    SET deleted_at = NULL, enabled = true, role = 'ADMIN', provider = 'local' 
+    WHERE email = 'admin@lumierebeauty.vn' 
+    RETURNING id, email, enabled, role, provider, deleted_at
+  `);
+  
+  console.log("Updated users:", res.rows);
   await client.end();
 }
 

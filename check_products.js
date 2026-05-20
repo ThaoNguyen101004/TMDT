@@ -11,8 +11,8 @@ const client = new Client({
 
 async function main() {
   await client.connect();
-  const res = await client.query('SELECT id, name, image_url FROM public.categories');
-  console.log('Categories data:', res.rows);
+  const res = await client.query('SELECT id, name, thumbnail_url FROM public.products LIMIT 5');
+  console.log('Sample products:', res.rows);
   await client.end();
 }
 

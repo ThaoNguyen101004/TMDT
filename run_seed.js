@@ -6,7 +6,7 @@ const client = new pg.Client({
   port: 6543,
   database: 'postgres',
   user: 'postgres.ykgnutyoljducellogkm',
-  password: 'Nguyen101004@2004',
+  password: 'Thaonguyen101004@',
   ssl: { rejectUnauthorized: false }
 });
 
