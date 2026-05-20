@@ -242,6 +242,8 @@ public class AuthController {
                 .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
                 .role(user.getRole().name())
+                .birthday(user.getBirthday())
+                .gender(user.getGender())
                 .build();
 
         return ResponseEntity.ok(dto);
