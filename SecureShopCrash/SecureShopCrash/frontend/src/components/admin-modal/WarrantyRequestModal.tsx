@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Loader2, Shield, Clock, CheckCircle, Calendar, FileText } from 'lucide-react';
+import { X, Save, Loader2, Shield, Clock, CheckCircle, Calendar, FileText, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { WarrantyRequestApi } from '../../utils/api';
 import type { WarrantyRequest } from '../../types/types';
@@ -17,37 +17,110 @@ const WarrantyRequestModal: React.FC<WarrantyRequestModalProps> = ({
   warrantyRequest,
   onSuccess,
 }) => {
+  const isCreateMode = !warrantyRequest;
   const [isUpdating, setIsUpdating] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [formData, setFormData] = useState({
+    issueType: '',
+    description: '',
+    quantity: 1,
+    status: 'SUBMITTED',
+    orderItemId: ''
+  });
 
   useEffect(() => {
-    if (isOpen && warrantyRequest) {
-      setSelectedStatus(warrantyRequest.status);
+    if (isOpen) {
+      if (warrantyRequest) {
+        setFormData({
+          issueType: warrantyRequest.issueType,
+          description: warrantyRequest.description,
+          quantity: warrantyRequest.quantity,
+          status: warrantyRequest.status,
+          orderItemId: ''
+        });
+      } else {
+        setFormData({
+          issueType: '',
+          description: '',
+          quantity: 1,
+          status: 'SUBMITTED',
+          orderItemId: ''
+        });
+      }
     }
   }, [isOpen, warrantyRequest]);
 
-  const handleStatusUpdate = async () => {
-    if (!warrantyRequest || !selectedStatus || selectedStatus === warrantyRequest.status) return;
+  const handleSave = async () => {
+    if (!formData.issueType || !formData.description) {
+      toast.error('Vui lòng điền đầy đủ loại vấn đề và mô tả');
+      return;
+    }
 
     setIsUpdating(true);
     try {
-      if (selectedStatus === 'ACCEPTED') {
-        await WarrantyRequestApi.approveWarrantyRequest(warrantyRequest.id);
-      } else if (selectedStatus === 'REJECTED') {
-        await WarrantyRequestApi.rejectWarrantyRequest(warrantyRequest.id);
-      } else if (selectedStatus === 'REPAIRED' || selectedStatus === 'REPLACED' || selectedStatus === 'RETURNED') {
-        await WarrantyRequestApi.resolveWarrantyRequest(warrantyRequest.id);
+      if (isCreateMode) {
+        if (!formData.orderItemId) {
+          toast.error('Vui lòng nhập Order Item ID');
+          setIsUpdating(false);
+          return;
+        }
+        await WarrantyRequestApi.createWarrantyRequest({
+          orderItemId: formData.orderItemId,
+          issueType: formData.issueType,
+          description: formData.description,
+          quantity: formData.quantity
+        });
+        toast.success('Tạo yêu cầu bảo hành thành công!');
       } else {
-        await WarrantyRequestApi.updateWarrantyRequest(warrantyRequest.id, { status: selectedStatus });
+        if (formData.status !== warrantyRequest!.status) {
+          if (formData.status === 'ACCEPTED') {
+            await WarrantyRequestApi.approveWarrantyRequest(warrantyRequest!.id);
+          } else if (formData.status === 'REJECTED') {
+            await WarrantyRequestApi.rejectWarrantyRequest(warrantyRequest!.id);
+          } else if (['REPAIRED', 'REPLACED', 'RETURNED'].includes(formData.status)) {
+            await WarrantyRequestApi.resolveWarrantyRequest(warrantyRequest!.id);
+          } else {
+            await WarrantyRequestApi.updateWarrantyRequest(warrantyRequest!.id, { 
+              issueType: formData.issueType,
+              description: formData.description,
+              status: formData.status 
+            });
+          }
+        } else {
+          // Just update text fields if status unchanged
+          await WarrantyRequestApi.updateWarrantyRequest(warrantyRequest!.id, { 
+            issueType: formData.issueType,
+            description: formData.description
+          });
+        }
+        toast.success('Cập nhật thành công!');
       }
-      toast.success('Cập nhật trạng thái thành công!');
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error updating status:', error);
-      toast.error('Có lỗi xảy ra khi cập nhật trạng thái');
+      console.error('Error saving warranty request:', error);
+      toast.error('Có lỗi xảy ra khi lưu');
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!warrantyRequest) return;
+    if (!window.confirm('Bạn có chắc chắn muốn xóa yêu cầu bảo hành này không?')) return;
+
+    setIsDeleting(true);
+    try {
+      await WarrantyRequestApi.deleteWarrantyRequest(warrantyRequest.id);
+      toast.success('Đã xóa thành công!');
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error('Error deleting:', error);
+      toast.error('Có lỗi xảy ra khi xóa');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -62,31 +135,11 @@ const WarrantyRequestModal: React.FC<WarrantyRequestModalProps> = ({
     ];
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig: any = {
-      SUBMITTED: { bg: 'bg-blue-100', text: 'text-blue-700', icon: Clock },
-      ACCEPTED: { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: Clock },
-      REJECTED: { bg: 'bg-red-100', text: 'text-red-700', icon: X },
-      REPAIRED: { bg: 'bg-green-100', text: 'text-green-700', icon: CheckCircle },
-      REPLACED: { bg: 'bg-green-100', text: 'text-green-700', icon: CheckCircle },
-      RETURNED: { bg: 'bg-gray-100', text: 'text-gray-700', icon: CheckCircle },
-    };
-    const config = statusConfig[status] || statusConfig.SUBMITTED;
-    const Icon = config.icon;
-    const option = getStatusOptions().find(opt => opt.value === status);
-    return (
-      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${config.bg} ${config.text}`}>
-        <Icon className="w-4 h-4" />
-        {option?.label || status}
-      </span>
-    );
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('vi-VN');
   };
 
-  if (!isOpen || !warrantyRequest) return null;
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -99,9 +152,9 @@ const WarrantyRequestModal: React.FC<WarrantyRequestModalProps> = ({
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
-                Chi tiết Yêu cầu Bảo hành
+                {isCreateMode ? 'Thêm Yêu cầu Bảo hành' : 'Chi tiết Yêu cầu Bảo hành'}
               </h2>
-              <p className="text-sm text-gray-500">#{warrantyRequest.id}</p>
+              {!isCreateMode && <p className="text-sm text-gray-500">#{warrantyRequest?.id}</p>}
             </div>
           </div>
           <button
@@ -113,18 +166,25 @@ const WarrantyRequestModal: React.FC<WarrantyRequestModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* Status and Update */}
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-gray-700">Trạng thái:</span>
-              {getStatusBadge(warrantyRequest.status)}
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Loại vấn đề</label>
+              <input 
+                type="text" 
+                value={formData.issueType}
+                onChange={e => setFormData({...formData, issueType: e.target.value})}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"
+                placeholder="VD: Lỗi phần mềm..."
+              />
             </div>
-            <div className="flex items-center gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
               <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                value={formData.status}
+                onChange={(e) => setFormData({...formData, status: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                disabled={isCreateMode}
               >
                 {getStatusOptions().map(option => (
                   <option key={option.value} value={option.value}>
@@ -132,31 +192,50 @@ const WarrantyRequestModal: React.FC<WarrantyRequestModalProps> = ({
                   </option>
                 ))}
               </select>
-              <button
-                onClick={handleStatusUpdate}
-                disabled={isUpdating || selectedStatus === warrantyRequest.status}
-                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
-              >
-                {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Cập nhật
-              </button>
             </div>
           </div>
 
-          {/* Warranty Details */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <FileText className="w-5 h-5 text-gray-600" />
-              <span className="font-medium text-gray-900">Chi tiết yêu cầu bảo hành</span>
-            </div>
-            <div className="space-y-3">
+          {isCreateMode && (
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className="font-medium text-sm">Vấn đề:</span>
-                <p className="text-sm text-gray-700 mt-1">{warrantyRequest.issueType}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Order Item ID</label>
+                <input 
+                  type="text" 
+                  value={formData.orderItemId}
+                  onChange={e => setFormData({...formData, orderItemId: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="ID của sản phẩm trong đơn hàng..."
+                />
               </div>
               <div>
-                <span className="font-medium text-sm">Mô tả:</span>
-                <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{warrantyRequest.description}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Số lượng</label>
+                <input 
+                  type="number" 
+                  min="1"
+                  value={formData.quantity}
+                  onChange={e => setFormData({...formData, quantity: parseInt(e.target.value) || 1})}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả chi tiết</label>
+            <textarea 
+              value={formData.description}
+              onChange={e => setFormData({...formData, description: e.target.value})}
+              rows={4}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"
+              placeholder="Mô tả chi tiết lỗi..."
+            />
+          </div>
+
+          {!isCreateMode && warrantyRequest && (
+            <div className="bg-gray-50 rounded-lg p-4 mt-4">
+              <div className="flex items-center gap-3 mb-3">
+                <FileText className="w-5 h-5 text-gray-600" />
+                <span className="font-medium text-gray-900">Thông tin sản phẩm</span>
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
@@ -167,10 +246,10 @@ const WarrantyRequestModal: React.FC<WarrantyRequestModalProps> = ({
                 <div>
                   <span className="font-medium">Số lượng:</span>
                   <p className="text-gray-700">{warrantyRequest.quantity}</p>
-                  <p className="text-gray-500 text-xs">Đơn giá: {warrantyRequest.unitPrice.toLocaleString('vi-VN')}₫</p>
+                  <p className="text-gray-500 text-xs">Đơn giá: {(warrantyRequest.unitPrice || 0).toLocaleString('vi-VN')}₫</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4 text-xs text-gray-500">
+              <div className="flex items-center gap-4 text-xs text-gray-500 mt-4">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
                   Yêu cầu: {formatDate(warrantyRequest.requestedAt)}
@@ -183,17 +262,39 @@ const WarrantyRequestModal: React.FC<WarrantyRequestModalProps> = ({
                 )}
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            Đóng
-          </button>
+        <div className="flex justify-between p-6 border-t border-gray-200">
+          <div>
+            {!isCreateMode && (
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors flex items-center gap-2"
+              >
+                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Xóa Yêu cầu
+              </button>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Hủy
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isUpdating}
+              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {isCreateMode ? 'Tạo mới' : 'Lưu thay đổi'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

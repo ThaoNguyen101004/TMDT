@@ -85,4 +85,24 @@ public class SupportTicketServiceImpl implements SupportTicketService {
         t.setStatus(status);
         return SupportTicketMapper.toDTO(repository.save(t));
     }
+
+    @Override
+    public SupportTicketDTO updateTicket(UUID id, CreateTicketRequest req) {
+        SupportTicket t = repository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
+        
+        t.setTitle(req.getTitle());
+        t.setSubject(req.getSubject());
+        t.setContent(req.getContent());
+        
+        return SupportTicketMapper.toDTO(repository.save(t));
+    }
+
+    @Override
+    public void deleteTicket(UUID id) {
+        if (!repository.existsById(id)) {
+            throw new IllegalArgumentException("Ticket not found");
+        }
+        repository.deleteById(id);
+    }
 }

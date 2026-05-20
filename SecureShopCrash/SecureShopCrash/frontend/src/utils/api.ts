@@ -410,6 +410,16 @@ export const SupportTicketApi = {
     });
     return response.data;
   },
+  // AUTH - Admin: Sửa ticket
+  updateTicket: async (id: string, data: any) => {
+    const response = await api.put(`/tickets/admin/${id}`, data);
+    return response.data;
+  },
+  // AUTH - Admin: Xóa ticket
+  deleteTicket: async (id: string) => {
+    const response = await api.delete(`/tickets/admin/${id}`);
+    return response.data;
+  },
 };
 
 // Review API - FIXED VERSION

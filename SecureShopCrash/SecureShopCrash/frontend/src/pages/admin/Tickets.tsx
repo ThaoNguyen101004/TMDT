@@ -194,6 +194,20 @@ const Tickets: React.FC = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-zinc-800">Quản lý hỗ trợ</h2>
+        <button 
+          onClick={() => {
+            if (activeTab === 'tickets') {
+              setSelectedTicket(null);
+              setIsModalOpen(true);
+            } else {
+              setSelectedWarrantyRequest(null);
+              setIsModalOpen(true);
+            }
+          }}
+          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm"
+        >
+          + Thêm mới
+        </button>
       </div>
 
       {/* Search and Filter Bar */}

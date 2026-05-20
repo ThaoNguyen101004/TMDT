@@ -417,17 +417,12 @@ const Profile: React.FC = () => {
 
   }
 
-  // Payments (leave as sample since no API)
-  const samplePayments = [
-    { id: 1, type: 'Visa', card: '**** **** **** 1234', default: true },
-    { id: 2, type: 'Momo', card: 'SĐT: 0987 654 321', default: false }
-  ];
+
 
   const menu = [
     { key: 'account', label: 'Thông tin cá nhân' },
     { key: 'reviews', label: 'Đánh giá của tôi' },
     { key: 'address', label: 'Địa chỉ' },
-    { key: 'payment', label: 'Phương thức thanh toán' },
     { key: 'password', label: 'Đổi mật khẩu' },
     
   ];
@@ -530,31 +525,6 @@ const Profile: React.FC = () => {
               </select>
             </div>
             
-            <div className="mt-6 border-t pt-6">
-              <h3 className="text-lg font-semibold text-zinc-800 mb-2">Bảo mật</h3>
-              <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border">
-                <div>
-                  <p className="font-medium text-gray-800">Xác thực 2 bước (2FA)</p>
-                  <p className="text-sm text-gray-500">Tăng cường bảo mật bằng cách yêu cầu mã OTP gửi qua email khi đăng nhập.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleToggle2FA}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-                    formData.is2faEnabled ? 'bg-purple-600' : 'bg-gray-200'
-                  }`}
-                  role="switch"
-                  aria-checked={formData.is2faEnabled}
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      formData.is2faEnabled ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
 
             <button type="submit" className="mt-6 bg-purple-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-purple-700 w-full sm:w-auto text-sm sm:text-base">
               Lưu thay đổi
@@ -859,26 +829,6 @@ const Profile: React.FC = () => {
                 </div>
               </div>
             )}
-          </div>
-        );
-
-      case 'payment':
-        return (
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Phương thức thanh toán</h2>
-            {samplePayments.map(pay => (
-              <div key={pay.id} className="border rounded p-3 sm:p-4 mb-3 bg-white shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-                <div className="flex-1">
-                  <p className="font-bold text-sm sm:text-base">{pay.type}</p>
-                  <p className="text-gray-600 text-xs sm:text-sm mt-1">{pay.card}</p>
-                  {pay.default && <span className="text-purple-600 text-xs font-semibold inline-block mt-1">Mặc định</span>}
-                </div>
-                <button className="text-purple-600 text-sm self-start sm:self-auto">Sửa</button>
-              </div>
-            ))}
-            <button className="mt-3 bg-cyan-500 text-white px-4 py-2 rounded w-full sm:w-auto text-sm sm:text-base">
-              + Thêm phương thức
-            </button>
           </div>
         );
 

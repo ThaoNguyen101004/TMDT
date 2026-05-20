@@ -15,4 +15,6 @@ public interface SupportTicketService {
     SupportTicketDTO closeTicket(UUID userId, UUID id);
     Page<SupportTicketDTO> getAllTickets(Pageable pageable);
     SupportTicketDTO updateStatus(UUID id, TicketStatus status);
+    SupportTicketDTO updateTicket(UUID id, CreateTicketRequest req);
+    void deleteTicket(UUID id);
 }

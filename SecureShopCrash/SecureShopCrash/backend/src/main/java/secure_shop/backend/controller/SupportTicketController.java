@@ -65,4 +65,19 @@ public class SupportTicketController {
             @RequestParam TicketStatus status) {
         return ResponseEntity.ok(supportTicketService.updateStatus(id, status));
     }
+
+    @PutMapping("/admin/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<SupportTicketDTO> updateTicket(
+            @PathVariable UUID id,
+            @RequestBody CreateTicketRequest req) {
+        return ResponseEntity.ok(supportTicketService.updateTicket(id, req));
+    }
+
+    @DeleteMapping("/admin/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteTicket(@PathVariable UUID id) {
+        supportTicketService.deleteTicket(id);
+        return ResponseEntity.ok().build();
+    }
 }
