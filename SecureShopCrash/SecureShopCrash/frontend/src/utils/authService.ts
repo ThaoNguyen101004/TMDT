@@ -11,7 +11,7 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:12345/api";
 export const authService = {
   // Login
   async login(email: string, password: string): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>("/auth/login", {
+    const response = await publicApi.post<AuthResponse>("/auth/login", {
       email,
       password,
     });

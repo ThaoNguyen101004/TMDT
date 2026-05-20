@@ -19,10 +19,9 @@ export const publicApi = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// === DANH SÁCH PUBLIC ENDPOINTS (CHỈ GET) ===
-// Các endpoint này cho phép GET không cần token
-// Nhưng POST/PUT/DELETE/PATCH vẫn cần token (admin only)
-const PUBLIC_GET_PATHS = [
+// === DANH SÁCH PUBLIC ENDPOINTS ===
+// Các endpoint này không cần token
+const PUBLIC_PATHS = [
   "/categories",
   "/brands",
   "/products",
@@ -35,27 +34,28 @@ const PUBLIC_GET_PATHS = [
   "/auth/forgot-password",
   "/auth/verify-token",
   "/auth/reset-password",
+  "/auth/login",
+  "/auth/register",
 ];
 
-// === REQUEST INTERCEPTOR: THÊM TOKEN CHO MỌI REQUEST (trừ public GET endpoints) ===
+// === REQUEST INTERCEPTOR: THÊM TOKEN CHO MỌI REQUEST (trừ public endpoints) ===
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("accessToken");
     const method = config.method?.toLowerCase();
     const url = config.url || "";
 
-    // Chỉ cho phép GET không cần token cho các public paths
-    // POST/PUT/DELETE/PATCH luôn cần token (admin operations)
-    const isPublicGet =
-      method === "get" && PUBLIC_GET_PATHS.some((path) => url.startsWith(path));
+    // Kiểm tra nếu là public endpoint
+    const isPublicPath = PUBLIC_PATHS.some((path) => url.startsWith(path));
 
-    // LUÔN gửi token nếu có (trừ khi là public GET endpoint)
-    if (token) {
-      // Nếu không phải public GET, bắt buộc phải có token
-      // Nếu là public GET, vẫn gửi token nếu có (để backend biết user đã login)
+    // LUÔN gửi token nếu có (ngoại trừ public endpoints)
+    if (token && !isPublicPath) {
       config.headers.Authorization = `Bearer ${token}`;
-    } else if (!isPublicGet) {
-      // Nếu không có token và không phải public GET, đây là lỗi
+    } else if (token) {
+      // Vẫn gửi token nếu có (để backend biết user đã login)
+      config.headers.Authorization = `Bearer ${token}`;
+    } else if (!isPublicPath && method !== "get") {
+      // Nếu không có token, GET không yêu cầu, nhưng POST/PUT/DELETE/PATCH cần cảnh báo
       console.warn(`No token available for ${method?.toUpperCase()} ${url}`);
     }
 
